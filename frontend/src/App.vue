@@ -1,11 +1,12 @@
-<script setup></script>
+<script setup>
+import { RouterView } from 'vue-router'
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <!-- Nơi hiển thị các trang (Home, About, v.v.) dựa theo đường dẫn URL -->
+  <RouterView />
 </template>
 
-<style scoped></style>
+<style scoped>
+/* Code CSS chung của dự án có thể để trống lúc này */
+</style>
