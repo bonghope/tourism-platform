@@ -6,6 +6,7 @@ import TourDetail from '../components/TourDetail.vue';
 import Destinations from '../components/Destinations.vue';
 import DestinationDetail from '../components/DestinationDetail.vue';
 import Wishlist from '../components/Wishlist.vue';
+import UserProfile from '../components/UserProfile.vue';
 
 const routes = [
     {
@@ -42,6 +43,11 @@ const routes = [
         path: '/wishlist',
         name: 'Wishlist',
         component: Wishlist
+    },
+    {
+        path: '/profile',
+        name: 'UserProfile',
+        component: UserProfile
     }
 ];
 
