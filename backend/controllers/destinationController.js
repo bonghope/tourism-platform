@@ -29,16 +29,45 @@ class DestinationController {
     static async getRecommendations(req, res, next) {
         try {
             const userId = req.user ? req.user.userId : null;
-            let query = `
-                SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
-                FROM Tours t
-                INNER JOIN Tour_Destinations td ON t.TourID = td.TourID
-                INNER JOIN User_Favorite_Destinations fd ON td.DestinationID = fd.DestinationID
-                WHERE fd.UserID = ? AND t.Status = 'PUBLISHED'
-                LIMIT 4
-            `;
-            const [rows] = await pool.query(query, [userId]);
+            let rows = [];
 
+            // 1. Ưu tiên gợi ý theo Địa danh yêu thích của User
+            if (userId) {
+                const [destRows] = await pool.query(`
+                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
+                    FROM Tours t
+                    INNER JOIN Tour_Destinations td ON t.TourID = td.TourID
+                    INNER JOIN User_Favorite_Destinations fd ON td.DestinationID = fd.DestinationID
+                    WHERE fd.UserID = ? AND t.Status = 'PUBLISHED'
+                    LIMIT 4
+                `, [userId]);
+                rows = destRows;
+
+                // 2. Nếu chưa có Địa danh yêu thích -> Gợi ý dựa trên Tour yêu thích của User
+                if (rows.length === 0) {
+                    const [tourRows] = await pool.query(`
+                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
+                        FROM Tours t
+                        WHERE (
+                            t.TourID IN (SELECT TourID FROM User_Favorite_Tours WHERE UserID = ?)
+                            OR t.TourID IN (
+                                SELECT td.TourID FROM Tour_Destinations td
+                                WHERE td.DestinationID IN (
+                                    SELECT DISTINCT td2.DestinationID 
+                                    FROM User_Favorite_Tours ft 
+                                    JOIN Tour_Destinations td2 ON ft.TourID = td2.TourID 
+                                    WHERE ft.UserID = ?
+                                )
+                            )
+                        )
+                        AND t.Status = 'PUBLISHED'
+                        LIMIT 4
+                    `, [userId, userId]);
+                    rows = tourRows;
+                }
+            }
+
+            // 3. Fallback: Nếu không có hoặc khách chưa đăng nhập -> Lấy 4 tour nổi bật nhất
             if (rows.length === 0) {
                 const [fallbackRows] = await pool.query(`
                     SELECT TourID, Title, Slug, Price, Duration, AverageRating, ReviewCount
@@ -47,16 +76,20 @@ class DestinationController {
                     ORDER BY AverageRating DESC, ReviewCount DESC
                     LIMIT 4
                 `);
-                for (let tour of fallbackRows) {
-                    const [imgRows] = await pool.query(`SELECT ImageURL FROM Tour_Images WHERE TourID = ? LIMIT 1`, [tour.TourID]);
-                    tour.images = imgRows.map(img => img.ImageURL);
-                }
-                return res.status(200).json({ success: true, data: fallbackRows });
+                rows = fallbackRows;
+            }
+
+            // Gắn hình ảnh & trạng thái đã thả tim (isFavorite)
+            let favSet = new Set();
+            if (userId) {
+                const [userFavs] = await pool.query(`SELECT TourID FROM User_Favorite_Tours WHERE UserID = ?`, [userId]);
+                favSet = new Set(userFavs.map(f => f.TourID));
             }
 
             for (let tour of rows) {
                 const [imgRows] = await pool.query(`SELECT ImageURL FROM Tour_Images WHERE TourID = ? LIMIT 1`, [tour.TourID]);
                 tour.images = imgRows.map(img => img.ImageURL);
+                tour.isFavorite = favSet.has(tour.TourID);
             }
 
             res.status(200).json({ success: true, data: rows });

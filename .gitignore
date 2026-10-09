@@ -33,3 +33,12 @@ jspm_packages/
 *.sln
 *.sw?
 dist/
+
+# Local development copies (only standard backend/ and frontend/ are pushed to GitHub)
+backend-nhom/
+frontend-nhom/
+backend-manh/
+frontend-manh-user/
+frontend-manh-admin/
+chay-web.bat
+

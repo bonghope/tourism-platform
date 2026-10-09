@@ -68,8 +68,13 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
+import { useAuthStore } from '../stores/auth';
+import { useToastStore } from '../stores/toast';
 import TourCard from './TourCard.vue';
 import DestinationCard from './DestinationCard.vue';
+
+const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 const activeTab = ref('tours'); // 'tours' hoặc 'destinations'
 
@@ -83,12 +88,27 @@ const errorDests = ref(null);
 
 // Lấy danh sách Tour yêu thích
 const fetchWishlistTours = async () => {
+  if (!authStore.token) {
+    errorTours.value = 'Vui lòng đăng nhập để xem danh sách Tour đã lưu yêu thích.';
+    return;
+  }
   loadingTours.value = true;
+  errorTours.value = null;
   try {
-    const res = await fetch(`http://localhost:3000/api/tours/wishlist`);
+    const res = await fetch(`http://localhost:3000/api/tours/wishlist`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      errorTours.value = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      return;
+    }
+
     const json = await res.json();
     if (json.success) {
-      tours.value = json.data;
+      tours.value = (json.data || []).map(t => ({ ...t, isFavorite: true }));
     } else {
       errorTours.value = json.message;
     }
@@ -101,12 +121,27 @@ const fetchWishlistTours = async () => {
 
 // Lấy danh sách Địa danh yêu thích
 const fetchWishlistDests = async () => {
+  if (!authStore.token) {
+    errorDests.value = 'Vui lòng đăng nhập để xem danh sách Địa danh đã lưu yêu thích.';
+    return;
+  }
   loadingDests.value = true;
+  errorDests.value = null;
   try {
-    const res = await fetch(`http://localhost:3000/api/destinations/wishlist`);
+    const res = await fetch(`http://localhost:3000/api/destinations/wishlist`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      errorDests.value = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      return;
+    }
+
     const json = await res.json();
     if (json.success) {
-      destinations.value = json.data;
+      destinations.value = (json.data || []).map(d => ({ ...d, isFavorite: true }));
     } else {
       errorDests.value = json.message;
     }
@@ -122,8 +157,20 @@ const formatDate = (dateString) => {
 };
 
 watch(activeTab, (newVal) => {
-  if (newVal === 'tours' && tours.value.length === 0) fetchWishlistTours();
-  if (newVal === 'destinations' && destinations.value.length === 0) fetchWishlistDests();
+  if (newVal === 'tours') fetchWishlistTours();
+  if (newVal === 'destinations') fetchWishlistDests();
+});
+
+watch(() => authStore.token, (newVal) => {
+  if (newVal) {
+    if (activeTab.value === 'tours') fetchWishlistTours();
+    else fetchWishlistDests();
+  } else {
+    tours.value = [];
+    destinations.value = [];
+    errorTours.value = 'Vui lòng đăng nhập để xem danh sách Tour đã lưu.';
+    errorDests.value = 'Vui lòng đăng nhập để xem danh sách Địa danh đã lưu.';
+  }
 });
 
 onMounted(() => {

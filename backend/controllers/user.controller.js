@@ -1,0 +1,240 @@
+const pool = require('../config/database');
+
+// --- 1. LẤY & CẬP NHẬT HỒ SƠ KHÁCH HÀNG (USER PROFILE) ---
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const [users] = await pool.query(
+            'SELECT UserID, FullName, Email, Phone, AvatarURL, Role, Status, CreatedAt FROM Users WHERE UserID = ?',
+            [userId]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy người dùng." });
+        }
+
+        return res.status(200).json({ success: true, user: users[0] });
+    } catch (error) {
+        console.error("Lỗi khi lấy thông tin hồ sơ:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy thông tin hồ sơ." });
+    }
+};
+
+const updateProfile = async (req, res) => {
+    try {
+        const { phone, fullName, avatarUrl } = req.body;
+        const userId = req.user.userId;
+
+        if (phone && phone.trim()) {
+            const cleanPhone = phone.trim();
+            const [existPhone] = await pool.query('SELECT UserID FROM Users WHERE Phone = ? AND UserID != ?', [cleanPhone, userId]);
+            if (existPhone.length > 0) {
+                return res.status(400).json({ success: false, message: "Số điện thoại này đã được sử dụng bởi một tài khoản khác." });
+            }
+        }
+
+        await pool.query(
+            `UPDATE Users 
+             SET Phone = COALESCE(?, Phone), 
+                 FullName = COALESCE(?, FullName), 
+                 AvatarURL = COALESCE(?, AvatarURL) 
+             WHERE UserID = ?`,
+            [phone ? phone.trim() : null, fullName ? fullName.trim() : null, avatarUrl || null, userId]
+        );
+
+        return res.status(200).json({ success: true, message: "Cập nhật hồ sơ thành công!" });
+    } catch (error) {
+        console.error("Lỗi khi cập nhật hồ sơ:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi cập nhật hồ sơ." });
+    }
+};
+
+// --- 2. QUẢN LÝ TOUR YÊU THÍCH (WISHLIST) ---
+const toggleWishlist = async (req, res) => {
+    try {
+        const { tourId } = req.body;
+        const userId = req.user.userId;
+
+        if (!tourId) {
+            return res.status(400).json({ success: false, message: "Vui lòng truyền tourId." });
+        }
+
+        // Kiểm tra xem user đã lưu tour này chưa
+        const [existing] = await pool.query(
+            'SELECT * FROM User_Favorite_Tours WHERE UserID = ? AND TourID = ?',
+            [userId, tourId]
+        );
+
+        if (existing.length > 0) {
+            // Nếu có rồi -> Xóa khỏi danh sách (Bỏ thả tim)
+            await pool.query('DELETE FROM User_Favorite_Tours WHERE UserID = ? AND TourID = ?', [userId, tourId]);
+            return res.status(200).json({ success: true, message: "Đã bỏ yêu thích Tour này.", isFavorite: false });
+        } else {
+            // Nếu chưa có -> Thêm vào danh sách (Thả tim)
+            await pool.query('INSERT INTO User_Favorite_Tours (UserID, TourID) VALUES (?, ?)', [userId, tourId]);
+            return res.status(200).json({ success: true, message: "Đã thêm Tour vào danh sách yêu thích!", isFavorite: true });
+        }
+    } catch (error) {
+        console.error("Lỗi khi cập nhật danh sách yêu thích:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi cập nhật danh sách yêu thích." });
+    }
+};
+
+const getWishlist = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const query = `
+            SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.StartDate, t.AvailableSlots, t.AverageRating, f.SavedAt
+            FROM User_Favorite_Tours f
+            JOIN Tours t ON f.TourID = t.TourID
+            WHERE f.UserID = ?
+            ORDER BY f.SavedAt DESC
+        `;
+        const [tours] = await pool.query(query, [userId]);
+        return res.status(200).json({ success: true, total: tours.length, data: tours });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách Tour yêu thích:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy danh sách Tour yêu thích." });
+    }
+};
+
+// --- 3. QUẢN LÝ ĐIỂM ĐẾN YÊU THÍCH (FAVORITE DESTINATIONS) ---
+const toggleFavoriteDestination = async (req, res) => {
+    try {
+        const { destinationId } = req.body;
+        const userId = req.user.userId;
+
+        if (!destinationId) {
+            return res.status(400).json({ success: false, message: "Vui lòng truyền destinationId." });
+        }
+
+        const [existing] = await pool.query(
+            'SELECT * FROM User_Favorite_Destinations WHERE UserID = ? AND DestinationID = ?',
+            [userId, destinationId]
+        );
+
+        if (existing.length > 0) {
+            await pool.query('DELETE FROM User_Favorite_Destinations WHERE UserID = ? AND DestinationID = ?', [userId, destinationId]);
+            return res.status(200).json({ success: true, message: "Đã xóa địa danh khỏi sở thích.", isFavorite: false });
+        } else {
+            await pool.query('INSERT INTO User_Favorite_Destinations (UserID, DestinationID) VALUES (?, ?)', [userId, destinationId]);
+            return res.status(200).json({ success: true, message: "Đã thêm địa danh vào sở thích!", isFavorite: true });
+        }
+    } catch (error) {
+        console.error("Lỗi khi cập nhật điểm đến yêu thích:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi cập nhật điểm đến yêu thích." });
+    }
+};
+
+const getFavoriteDestinations = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const query = `
+            SELECT d.DestinationID, d.Name, d.Slug, d.Description, d.ImageURL, f.SavedAt
+            FROM User_Favorite_Destinations f
+            JOIN Destinations d ON f.DestinationID = d.DestinationID
+            WHERE f.UserID = ?
+            ORDER BY f.SavedAt DESC
+        `;
+        const [destinations] = await pool.query(query, [userId]);
+        return res.status(200).json({ success: true, total: destinations.length, data: destinations });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách điểm đến yêu thích:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy danh sách điểm đến yêu thích." });
+    }
+};
+
+// --- 4. XÁC THỰC EMAIL RIÊNG CHO HỒ SƠ TÀI KHOẢN (OTP 5 PHÚT) ---
+const emailOtpStore = new Map();
+
+const requestEmailOtp = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { email } = req.body;
+
+        if (!email || !email.trim()) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập địa chỉ Email." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+
+        // Kiểm tra xem Email đã bị tài khoản khác sử dụng chưa
+        const [existing] = await pool.query(
+            'SELECT UserID FROM Users WHERE Email = ? AND UserID != ?',
+            [cleanEmail, userId]
+        );
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: "Email này đã được sử dụng bởi một tài khoản khác." });
+        }
+
+        // Tạo mã OTP 6 số
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 5 * 60 * 1000;
+
+        emailOtpStore.set('EMAIL_VERIFY_' + userId, {
+            email: cleanEmail,
+            otp,
+            expiresAt
+        });
+
+        console.log(`[USER EMAIL OTP] User ${userId} yêu cầu xác thực email ${cleanEmail} với mã OTP: ${otp}`);
+
+        return res.status(200).json({
+            success: true,
+            message: `Mã OTP xác thực đã được gửi tới email ${cleanEmail} (hiệu lực 5 phút).`,
+            otp: otp
+        });
+    } catch (error) {
+        console.error("Lỗi gửi OTP xác nhận email:", error);
+        return res.status(500).json({ success: false, message: "Lỗi hệ thống khi gửi mã xác thực email." });
+    }
+};
+
+const verifyEmailOtp = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { otp } = req.body;
+
+        if (!otp) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập mã OTP xác thực." });
+        }
+
+        const verifyData = emailOtpStore.get('EMAIL_VERIFY_' + userId);
+        if (!verifyData) {
+            return res.status(400).json({ success: false, message: "Chưa có yêu cầu xác thực email hoặc mã OTP đã hết hạn." });
+        }
+
+        if (Date.now() > verifyData.expiresAt) {
+            emailOtpStore.delete('EMAIL_VERIFY_' + userId);
+            return res.status(400).json({ success: false, message: "Mã OTP đã hết hạn (5 phút). Vui lòng lấy mã mới." });
+        }
+
+        if (verifyData.otp !== otp.toString().trim()) {
+            return res.status(400).json({ success: false, message: "Mã OTP không chính xác!" });
+        }
+
+        // Cập nhật Email vào database cho người dùng
+        await pool.query('UPDATE Users SET Email = ? WHERE UserID = ?', [verifyData.email, userId]);
+        emailOtpStore.delete('EMAIL_VERIFY_' + userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Xác thực và liên kết Email vào tài khoản thành công!",
+            email: verifyData.email
+        });
+    } catch (error) {
+        console.error("Lỗi xác thực email:", error);
+        return res.status(500).json({ success: false, message: "Lỗi hệ thống khi xác thực email." });
+    }
+};
+
+module.exports = {
+    getProfile,
+    updateProfile,
+    toggleWishlist,
+    getWishlist,
+    toggleFavoriteDestination,
+    getFavoriteDestinations,
+    requestEmailOtp,
+    verifyEmailOtp
+};

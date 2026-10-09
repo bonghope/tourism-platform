@@ -26,7 +26,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { useAuthStore } from '../stores/auth';
+import { useToastStore } from '../stores/toast';
+
+const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 const defaultTourImage = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80';
 
@@ -41,7 +46,13 @@ const props = defineProps({
   }
 });
 
-const isFavorite = ref(props.tour.isFavorite !== undefined ? props.tour.isFavorite : props.isInitialFavorite);
+const isFavorite = ref(props.tour.isFavorite !== undefined ? !!props.tour.isFavorite : props.isInitialFavorite);
+
+watch(() => props.tour.isFavorite, (newVal) => {
+  if (newVal !== undefined) {
+    isFavorite.value = !!newVal;
+  }
+});
 
 const displayImage = computed(() => {
   if (props.tour.images && props.tour.images.length > 0 && !props.tour.images[0].includes('example.com')) {
@@ -62,22 +73,42 @@ const handleImageError = (e) => {
 
 const toggleFavorite = async (e) => {
   e.stopPropagation(); 
+  
+  if (!authStore.token) {
+    toastStore.warning("Vui lòng đăng nhập để lưu Tour này vào danh sách yêu thích!");
+    authStore.openModal('login');
+    return;
+  }
+
   try {
     const res = await fetch(`http://localhost:3000/api/tours/${props.tour.TourID}/favorite`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      }
     });
     
     if (res.status === 401 || res.status === 403) {
-      alert("Vui lòng đăng nhập để lưu Tour này vào danh sách yêu thích!");
+      toastStore.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      authStore.openModal('login');
       return;
     }
 
     const json = await res.json();
     if (json.success) {
       isFavorite.value = json.action === 'added';
+      if (isFavorite.value) {
+        toastStore.success('Đã lưu tour vào danh sách yêu thích ❤️');
+      } else {
+        toastStore.info('Đã bỏ yêu thích tour');
+      }
+    } else {
+      toastStore.error(json.message || 'Lỗi khi cập nhật yêu thích');
     }
   } catch (err) {
     console.error('Lỗi lưu Wishlist', err);
+    toastStore.error('Có lỗi xảy ra khi cập nhật danh sách yêu thích.');
   }
 };
 
