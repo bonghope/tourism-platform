@@ -23,8 +23,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
+import { useToastStore } from '../stores/toast';
 
 const defaultDestImage = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80';
 
@@ -40,23 +42,55 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const isFavorite = ref(props.isInitialFavorite);
+const authStore = useAuthStore();
+const toastStore = useToastStore();
+const isFavorite = ref(props.destination.isFavorite !== undefined ? !!props.destination.isFavorite : props.isInitialFavorite);
+
+watch(() => props.destination.isFavorite, (newVal) => {
+  if (newVal !== undefined) {
+    isFavorite.value = !!newVal;
+  }
+});
 
 const handleImgError = (e) => {
   e.target.src = defaultDestImage;
 };
 
 const toggleFavorite = async () => {
+  if (!authStore.token) {
+    toastStore.warning("Vui lòng đăng nhập để lưu Địa danh này vào danh sách yêu thích!");
+    authStore.openModal('login');
+    return;
+  }
   try {
     const res = await fetch(`http://localhost:3000/api/destinations/${props.destination.DestinationID}/favorite`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      }
     });
+
+    if (res.status === 401 || res.status === 403) {
+      toastStore.warning("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+      authStore.openModal('login');
+      return;
+    }
+
     const json = await res.json();
     if (json.success) {
       isFavorite.value = json.action === 'added';
+      if (isFavorite.value) {
+        toastStore.success('Đã lưu địa danh vào danh sách yêu thích ❤️');
+      } else {
+        toastStore.info('Đã bỏ yêu thích địa danh');
+      }
+    } else {
+      toastStore.error(json.message || 'Lỗi khi cập nhật yêu thích');
     }
   } catch (err) {
     console.error('Lỗi lưu Wishlist', err);
+    toastStore.error('Có lỗi xảy ra khi lưu địa danh yêu thích.');
   }
 };
 

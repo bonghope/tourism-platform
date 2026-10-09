@@ -181,10 +181,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 import TourCard from './TourCard.vue';
 import PromoAdventureBanner from './PromoAdventureBanner.vue';
+
+const authStore = useAuthStore();
 
 const fallbackHeroBg = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=1920&q=80';
 
@@ -328,7 +331,12 @@ const fetchTours = async () => {
     if (filterMaxPrice.value) url.searchParams.append('maxPrice', filterMaxPrice.value);
     if (filterStartDate.value) url.searchParams.append('startDate', filterStartDate.value);
 
-    const res = await fetch(url.toString());
+    const headers = {};
+    if (authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+
+    const res = await fetch(url.toString(), { headers });
     const json = await res.json();
     if (json.success) {
       tours.value = json.data;
@@ -344,7 +352,11 @@ const fetchTours = async () => {
 
 const fetchRecommendations = async () => {
   try {
-    const res = await fetch('http://localhost:3000/api/destinations/recommendations');
+    const headers = {};
+    if (authStore.token) {
+      headers['Authorization'] = `Bearer ${authStore.token}`;
+    }
+    const res = await fetch('http://localhost:3000/api/destinations/recommendations', { headers });
     const json = await res.json();
     if (json.success && json.data.length > 0) {
       recommendedTours.value = json.data;
@@ -353,6 +365,11 @@ const fetchRecommendations = async () => {
     console.error('Không thể lấy danh sách gợi ý', err);
   }
 };
+
+watch(() => authStore.token, () => {
+  fetchTours();
+  fetchRecommendations();
+});
 
 const fetchDestinations = async () => {
   try {
