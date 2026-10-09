@@ -87,103 +87,107 @@
     </div>
 
     <!-- MODAL TẠO & SỬA TOUR -->
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal-card wide-card">
-        <div class="modal-header">
-          <h3>{{ isEditing ? 'Cập nhật Tour & Lộ trình' : 'Tạo Tour Mới' }}</h3>
-          <button class="modal-close" @click="showModal = false">✕</button>
-        </div>
-        <form @submit.prevent="handleSubmit">
-          <div class="grid-2">
-            <div class="form-group">
-              <label class="form-label">Tiêu đề Tour *</label>
-              <input v-model="formData.title" @input="autoSlug" type="text" required class="form-control" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Đường dẫn Slug *</label>
-              <input v-model="formData.slug" type="text" required class="form-control" />
-            </div>
+    <Teleport to="body">
+      <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+        <div class="modal-card wide-card">
+          <div class="modal-header">
+            <h3>{{ isEditing ? 'Cập nhật Tour & Lộ trình' : 'Tạo Tour Mới' }}</h3>
+            <button class="modal-close" @click="showModal = false">✕</button>
           </div>
-
-          <div class="grid-3">
-            <div class="form-group">
-              <label class="form-label">Giá tiền (VNĐ) *</label>
-              <input v-model="formData.price" type="number" min="1000" required class="form-control" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Thời lượng *</label>
-              <input v-model="formData.duration" type="text" required class="form-control" placeholder="3 Ngày 2 Đêm" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Số chỗ tối đa *</label>
-              <input v-model="formData.maxSlots" type="number" min="1" required class="form-control" />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="form-group">
-              <label class="form-label">Ngày khởi hành *</label>
-              <input v-model="formData.startDate" type="date" required class="form-control" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Địa danh</label>
-              <select v-model="formData.destinationId" class="form-select">
-                <option value="">-- Chọn địa danh liên kết --</option>
-                <option v-for="d in destinations" :key="d.DestinationID" :value="d.DestinationID">
-                  {{ d.Name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Trình soạn thảo lộ trình từng ngày (Itinerary) -->
-          <div class="itinerary-box">
-            <div class="itinerary-top">
-              <strong>Lộ trình chi tiết từng ngày</strong>
-              <button type="button" class="btn btn-outline btn-sm" @click="addDay">+ Thêm ngày</button>
-            </div>
-
-            <div v-for="(day, idx) in itineraryList" :key="idx" class="itinerary-item">
-              <div class="item-head">
-                <span class="day-num">Ngày {{ idx + 1 }}</span>
-                <button type="button" class="btn-remove" @click="removeDay(idx)" v-if="itineraryList.length > 1">Xóa</button>
+          <form @submit.prevent="handleSubmit">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Tiêu đề Tour *</label>
+                <input v-model="formData.title" @input="autoSlug" type="text" required class="form-control" />
               </div>
-              <input v-model="day.title" type="text" placeholder="Tiêu đề ngày (VD: Tham quan danh lam và ăn trưa)" class="form-control" required style="margin-bottom: 6px;" />
-              <textarea v-model="day.detail" placeholder="Mô tả chi tiết hoạt động trong ngày..." rows="2" class="form-textarea"></textarea>
+              <div class="form-group">
+                <label class="form-label">Đường dẫn Slug *</label>
+                <input v-model="formData.slug" type="text" required class="form-control" />
+              </div>
             </div>
-          </div>
 
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline" @click="showModal = false">Hủy</button>
-            <button type="submit" class="btn btn-primary" :disabled="submitLoading">
-              {{ isEditing ? 'Lưu thay đổi' : 'Tạo Tour' }}
-            </button>
-          </div>
-        </form>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label">Giá tiền (VNĐ) *</label>
+                <input v-model="formData.price" type="number" min="1000" required class="form-control" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Thời lượng *</label>
+                <input v-model="formData.duration" type="text" required class="form-control" placeholder="3 Ngày 2 Đêm" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Số chỗ tối đa *</label>
+                <input v-model="formData.maxSlots" type="number" min="1" required class="form-control" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Ngày khởi hành *</label>
+                <input v-model="formData.startDate" type="date" required class="form-control" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Địa danh</label>
+                <select v-model="formData.destinationId" class="form-select">
+                  <option value="">-- Chọn địa danh liên kết --</option>
+                  <option v-for="d in destinations" :key="d.DestinationID" :value="d.DestinationID">
+                    {{ d.Name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Trình soạn thảo lộ trình từng ngày (Itinerary) -->
+            <div class="itinerary-box">
+              <div class="itinerary-top">
+                <strong>Lộ trình chi tiết từng ngày</strong>
+                <button type="button" class="btn btn-outline btn-sm" @click="addDay">+ Thêm ngày</button>
+              </div>
+
+              <div v-for="(day, idx) in itineraryList" :key="idx" class="itinerary-item">
+                <div class="item-head">
+                  <span class="day-num">Ngày {{ idx + 1 }}</span>
+                  <button type="button" class="btn-remove" @click="removeDay(idx)" v-if="itineraryList.length > 1">Xóa</button>
+                </div>
+                <input v-model="day.title" type="text" placeholder="Tiêu đề ngày (VD: Tham quan danh lam và ăn trưa)" class="form-control" required style="margin-bottom: 6px;" />
+                <textarea v-model="day.detail" placeholder="Mô tả chi tiết hoạt động trong ngày..." rows="2" class="form-textarea"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline" @click="showModal = false">Hủy</button>
+              <button type="submit" class="btn btn-primary" :disabled="submitLoading">
+                {{ isEditing ? 'Lưu thay đổi' : 'Tạo Tour' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- MODAL XÓA MỀM -->
-    <div v-if="tourToDelete" class="modal-overlay">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Xác nhận xóa mềm Tour</h3>
-          <button class="modal-close" @click="tourToDelete = null">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Bạn có chắc chắn muốn xóa tour <strong>{{ tourToDelete.Title }}</strong>?
-          </p>
-          <div class="warning-box">
-            Nguyên tắc bảo toàn dữ liệu: Tour sẽ được gắn cờ DELETED, không còn hiển thị cho khách hàng nhưng vẫn lưu giữ nguyên vẹn trong hệ thống để bảo đảm tính chính xác của các đơn đặt chỗ trước đó.
+    <Teleport to="body">
+      <div v-if="tourToDelete" class="modal-overlay" @click.self="tourToDelete = null">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Xác nhận xóa mềm Tour</h3>
+            <button class="modal-close" @click="tourToDelete = null">✕</button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Bạn có chắc chắn muốn xóa tour <strong>{{ tourToDelete.Title }}</strong>?
+            </p>
+            <div class="warning-box">
+              Nguyên tắc bảo toàn dữ liệu: Tour sẽ được gắn cờ DELETED, không còn hiển thị cho khách hàng nhưng vẫn lưu giữ nguyên vẹn trong hệ thống để bảo đảm tính chính xác của các đơn đặt chỗ trước đó.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline" @click="tourToDelete = null">Hủy</button>
+            <button class="btn btn-danger" @click="confirmDelete">Xác nhận xóa mềm</button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="tourToDelete = null">Hủy</button>
-          <button class="btn btn-danger" @click="confirmDelete">Xác nhận xóa mềm</button>
-        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
