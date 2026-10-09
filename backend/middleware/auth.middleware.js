@@ -37,4 +37,13 @@ const verifyTokenOptional = (req, res, next) => {
     }
 };
 
-module.exports = { verifyToken, verifyTokenOptional };
+// Hàm kiểm tra xem người dùng có phải là Admin không (Dành cho Module 6)
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'ADMIN') {
+        next();
+    } else {
+        return res.status(403).json({ success: false, message: "Bạn không có quyền truy cập (Cần quyền Admin)" });
+    }
+};
+
+module.exports = { verifyToken, verifyTokenOptional, isAdmin };
