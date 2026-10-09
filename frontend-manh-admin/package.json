@@ -1,0 +1,19 @@
+{
+  "name": "travel-booking-frontend-manh-admin",
+  "version": "1.0.0",
+  "description": "Frontend TaVivu - Module 6: Cổng Quản trị Hệ thống (Admin Portal) - Mạnh",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pinia": "^4.0.3",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.0"
+  }
+}
