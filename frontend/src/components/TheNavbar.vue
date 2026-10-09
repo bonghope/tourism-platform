@@ -9,6 +9,7 @@
       <router-link to="/tours">Tour</router-link>
       <router-link to="/destinations">Điểm đến</router-link>
       <a href="#promo-adventure-section" @click="scrollToPromo">Khuyến mãi</a>
+      <router-link to="/bookings">Lịch sử đặt tour</router-link>
       <router-link to="/about">Về chúng tôi</router-link>
     </div>
 
@@ -129,7 +130,7 @@ onUnmounted(() => {
 }
 .nav-links {
   display: flex;
-  gap: 32px;
+  gap: 18px;
 }
 .nav-links a {
   text-decoration: none;
@@ -268,4 +269,9 @@ onUnmounted(() => {
   background: #fef2f2;
   color: #dc2626;
 }
+</style>
+
+<style scoped>
+@media (max-width: 1050px) { .navbar { width: 96%; padding: 0 16px; } .nav-links { gap: 12px; font-size: .85rem; } .nav-actions .btn-register { display:none; } }
+@media (max-width: 720px) { .navbar { border-radius: 20px; height:auto; min-height:64px; flex-wrap:wrap; padding:10px 16px; gap:8px; } .nav-links { order:3; width:100%; overflow-x:auto; white-space:nowrap; padding-bottom:4px; } .btn-login { padding:6px 12px; } }
 </style>

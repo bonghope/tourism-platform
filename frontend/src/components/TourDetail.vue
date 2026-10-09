@@ -50,7 +50,9 @@
               <span>Khởi hành: <strong>{{ formatDate(tour.StartDate) }}</strong></span>
               <span>Số chỗ còn nhận: <strong>{{ tour.AvailableSlots }}</strong> / {{ tour.MaxSlots }}</span>
             </div>
-            <button class="btn-book-large">Tiến hành Đặt Tour</button>
+            <button class="btn-book-large" @click="$router.push('/booking/' + tour.TourID)">
+              Tiến hành Đặt Tour
+            </button>
           </div>
         </div>
 

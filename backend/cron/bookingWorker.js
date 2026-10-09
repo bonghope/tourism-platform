@@ -1,9 +1,7 @@
 const cron = require('node-cron');
 const pool = require('../config/database');
 
-// Cấu hình thời gian chạy:
-// '0 0 * * *' : Chạy 1 lần vào đúng 00:00 (Nửa đêm) mỗi ngày
-// '* * * * *' : Chạy 1 phút 1 lần (Dùng để test lúc lập trình)
+
 cron.schedule('0 0 * * *', async () => {
     console.log('[CRON] Đang quét hệ thống để cập nhật trạng thái Booking...');
     let connection;

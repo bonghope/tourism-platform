@@ -8,12 +8,11 @@ exports.createBooking = async (req, res) => {
     let connection; // Khai báo ở đây để khối catch/finally có thể nhìn thấy
 
     try {
-        // Đưa lệnh lấy kết nối VÀO TRONG khối try
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        if (passengerCount <= 0 || passengerCount > 10) {
-           return res.status(400).json({ success: false, message: 'Số lượng khách phải từ 1 đến 10 người.' });
+        if (!Number.isInteger(passengerCount) || passengerCount <= 0 || passengerCount > 10) {
+           throw new Error('Số lượng khách phải từ 1 đến 10 người.');
 }
 
         const [tours] = await connection.query(
@@ -83,19 +82,25 @@ exports.paymentWebhook = async (req, res) => {
 
     try {
         connection = await pool.getConnection();
+        await connection.beginTransaction();
         const [bookings] = await connection.query(
-            "SELECT Status FROM Bookings WHERE BookingID = ?", [bookingId]
+            "SELECT Status, HoldExpiresAt, TIMESTAMPDIFF(SECOND, NOW(), HoldExpiresAt) AS HoldRemainingSeconds FROM Bookings WHERE BookingID = ? FOR UPDATE", [bookingId]
         );
 
         if (bookings.length === 0) throw new Error('Không tìm thấy hóa đơn.');
 
         // Tính luỹ đẳng (Idempotency): Nếu đã PAID rồi thì return 200 OK luôn, không làm gì cả
         if (bookings[0].Status === 'PAID') {
+            await connection.commit();
             return res.status(200).json({ success: true, message: 'Đơn hàng đã được ghi nhận thanh toán trước đó.' });
         }
 
-        if (bookings[0].Status === 'CANCELLED') {
+        if (bookings[0].Status !== 'PENDING') {
             throw new Error('Đơn hàng đã bị hủy, thanh toán thất bại.');
+        }
+
+        if (bookings[0].HoldRemainingSeconds == null || Number(bookings[0].HoldRemainingSeconds) <= 0) {
+            throw new Error('Đã hết thời gian giữ chỗ. Vui lòng đặt tour lại.');
         }
 
         // Đổi trạng thái PENDING -> PAID và lưu TransactionID
@@ -104,9 +109,11 @@ exports.paymentWebhook = async (req, res) => {
             [paymentMethod, transactionId, bookingId]
         );
 
+        await connection.commit();
         res.status(200).json({ success: true, message: 'Xác nhận thanh toán thành công.' });
         // TODO: Gọi hàm gửi Email E-ticket tại đây
     } catch (error) {
+        if (connection) await connection.rollback();
         res.status(400).json({ success: false, message: error.message });
     } finally {
         if (connection) connection.release();
@@ -142,7 +149,8 @@ exports.cancelBookingByUser = async (req, res) => {
                 "UPDATE Tours SET AvailableSlots = AvailableSlots + ? WHERE TourID = ?",
                 [booking.PassengerCount, booking.TourID]
             );
-            res.status(200).json({ success: true, message: 'Đã hủy đơn giữ chỗ thành công.' });
+            await connection.commit();
+            return res.status(200).json({ success: true, message: 'Đã hủy đơn giữ chỗ thành công.' });
 
         } else if (booking.Status === 'PAID') {
             // KỊCH BẢN 2: Hủy đơn PAID -> Kiểm tra Time-window >= 72h
@@ -161,7 +169,8 @@ exports.cancelBookingByUser = async (req, res) => {
                 [booking.PassengerCount, booking.TourID]
             );
             // TODO: Ghi Log hệ thống tại đây
-            res.status(200).json({ success: true, message: 'Đơn hàng đã chuyển sang trạng thái chờ hoàn tiền.' });
+            await connection.commit();
+            return res.status(200).json({ success: true, message: 'Đơn hàng đã chuyển sang trạng thái chờ hoàn tiền.' });
 
         } else {
             throw new Error(`Không thể hủy đơn hàng đang ở trạng thái: ${booking.Status}`);
@@ -185,7 +194,9 @@ exports.getUserBookings = async (req, res) => {
     try {
         connection = await pool.getConnection();
         const [bookings] = await connection.query(
-            `SELECT b.BookingID, b.TourID, t.Title, b.PassengerCount, b.TotalPrice, b.Status, b.CreatedAt 
+            `SELECT b.BookingID, b.TourID, t.Title, b.PassengerCount, b.TotalPrice, b.Status,
+                    DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
+                    DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt, t.StartDate
              FROM Bookings b 
              JOIN Tours t ON b.TourID = t.TourID 
              WHERE b.UserID = ? 
@@ -209,7 +220,10 @@ exports.getBookingDetails = async (req, res) => {
     try {
         connection = await pool.getConnection();
         const [bookings] = await connection.query(
-            `SELECT b.*, t.Title 
+            `SELECT b.*,
+                    DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
+                    DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt,
+                    t.Title, t.StartDate, TIMESTAMPDIFF(SECOND, NOW(), b.HoldExpiresAt) AS HoldRemainingSeconds
              FROM Bookings b 
              JOIN Tours t ON b.TourID = t.TourID 
              WHERE b.BookingID = ?`,
