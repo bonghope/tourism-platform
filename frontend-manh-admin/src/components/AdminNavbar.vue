@@ -61,10 +61,28 @@
                 </svg>
                 Phân quyền thêm Admin (Tab Người dùng)
               </button>
+              <button class="btn-logout-dropdown" @click="handleLogout">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Đăng xuất tài khoản
+              </button>
             </div>
           </div>
         </transition>
       </div>
+
+      <!-- Nút Đăng xuất nhanh ngoài header -->
+      <button class="btn-quick-logout" @click="handleLogout" title="Đăng xuất khỏi Cổng Quản trị">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        <span>Đăng xuất</span>
+      </button>
     </div>
   </header>
 </template>
@@ -73,7 +91,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import adminApi from '../services/api';
 
-const emit = defineEmits(['change-tab', 'admin-switched']);
+const emit = defineEmits(['change-tab', 'admin-switched', 'logout']);
 
 const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
 
@@ -137,6 +155,13 @@ const goToUsersTab = () => {
   isOpen.value = false;
   emit('change-tab', 'users');
   window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'users' }));
+};
+
+const handleLogout = () => {
+  isOpen.value = false;
+  adminApi.logout();
+  emit('logout');
+  window.dispatchEvent(new CustomEvent('admin-logged-out'));
 };
 
 const handleClickOutside = (e) => {
@@ -440,6 +465,51 @@ onUnmounted(() => {
 .btn-manage-users:hover {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+.btn-logout-dropdown {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.2s;
+}
+
+.btn-logout-dropdown:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-quick-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-quick-logout:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #dc2626;
+  transform: translateY(-1px);
 }
 
 /* ANIMATION */

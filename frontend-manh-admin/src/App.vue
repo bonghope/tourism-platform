@@ -15,98 +15,104 @@
     </div>
 
     <div class="admin-content-wrap">
-      <!-- Header Admin -->
-      <AdminNavbar @change-tab="currentTab = $event" @admin-switched="reloadStats" />
+      <!-- MÀN HÌNH ĐĂNG NHẬP NẾU CHƯA XÁC THỰC ADMIN (KHÔNG CÓ ĐĂNG KÝ) -->
+      <AdminLogin v-if="!isAuthenticated" @login-success="handleLoginSuccess" />
 
-      <main class="admin-main">
-        <div class="admin-container">
-          <!-- Navigation Tabs -->
-          <nav class="admin-nav-tabs glass-panel">
-            <button 
-              :class="['nav-tab-item', currentTab === 'overview' ? 'active' : '']" 
-              @click="currentTab = 'overview'"
-            >
-              Tổng quan
-            </button>
-            <button 
-              :class="['nav-tab-item', currentTab === 'users' ? 'active' : '']" 
-              @click="currentTab = 'users'"
-            >
-              Người dùng
-            </button>
-            <button 
-              :class="['nav-tab-item', currentTab === 'destinations' ? 'active' : '']" 
-              @click="currentTab = 'destinations'"
-            >
-              Điểm đến
-            </button>
-            <button 
-              :class="['nav-tab-item', currentTab === 'tours' ? 'active' : '']" 
-              @click="currentTab = 'tours'"
-            >
-              Tour du lịch
-            </button>
-            <button 
-              :class="['nav-tab-item', currentTab === 'bookings' ? 'active' : '']" 
-              @click="currentTab = 'bookings'"
-            >
-              Đơn đặt chỗ
-            </button>
-            <button 
-              :class="['nav-tab-item', currentTab === 'reviews' ? 'active' : '']" 
-              @click="currentTab = 'reviews'"
-            >
-              Đánh giá
-            </button>
-          </nav>
+      <!-- GIAO DIỆN QUẢN TRỊ KHI ĐÃ ĐĂNG NHẬP -->
+      <template v-else>
+        <!-- Header Admin -->
+        <AdminNavbar @change-tab="currentTab = $event" @admin-switched="reloadStats" @logout="handleLogout" />
 
-          <!-- Viewport -->
-          <div class="admin-viewport glass-panel">
-            <!-- TAB TỔNG QUAN -->
-            <div v-if="currentTab === 'overview'" class="overview-section">
-              <div class="overview-header">
-                <h2>Trung tâm Quản trị TaVivu</h2>
-                <p>Tóm tắt các chỉ số vận hành và tình trạng hệ thống kết nối trực tiếp Cơ sở dữ liệu Cloud</p>
+        <main class="admin-main">
+          <div class="admin-container">
+            <!-- Navigation Tabs -->
+            <nav class="admin-nav-tabs glass-panel">
+              <button 
+                :class="['nav-tab-item', currentTab === 'overview' ? 'active' : '']" 
+                @click="currentTab = 'overview'"
+              >
+                Tổng quan
+              </button>
+              <button 
+                :class="['nav-tab-item', currentTab === 'users' ? 'active' : '']" 
+                @click="currentTab = 'users'"
+              >
+                Người dùng
+              </button>
+              <button 
+                :class="['nav-tab-item', currentTab === 'destinations' ? 'active' : '']" 
+                @click="currentTab = 'destinations'"
+              >
+                Điểm đến
+              </button>
+              <button 
+                :class="['nav-tab-item', currentTab === 'tours' ? 'active' : '']" 
+                @click="currentTab = 'tours'"
+              >
+                Tour du lịch
+              </button>
+              <button 
+                :class="['nav-tab-item', currentTab === 'bookings' ? 'active' : '']" 
+                @click="currentTab = 'bookings'"
+              >
+                Đơn đặt chỗ
+              </button>
+              <button 
+                :class="['nav-tab-item', currentTab === 'reviews' ? 'active' : '']" 
+                @click="currentTab = 'reviews'"
+              >
+                Đánh giá
+              </button>
+            </nav>
+
+            <!-- Viewport -->
+            <div class="admin-viewport glass-panel">
+              <!-- TAB TỔNG QUAN -->
+              <div v-if="currentTab === 'overview'" class="overview-section">
+                <div class="overview-header">
+                  <h2>Trung tâm Quản trị TaVivu</h2>
+                  <p>Tóm tắt các chỉ số vận hành và tình trạng hệ thống kết nối trực tiếp Cơ sở dữ liệu Cloud</p>
+                </div>
+
+                <div class="metrics-grid">
+                  <div class="metric-card" @click="currentTab = 'users'">
+                    <span class="metric-label">Tổng người dùng</span>
+                    <span class="metric-val">{{ counts.users }}</span>
+                    <span class="metric-desc">Bấm để quản lý tài khoản</span>
+                  </div>
+                  <div class="metric-card" @click="currentTab = 'destinations'">
+                    <span class="metric-label">Điểm đến</span>
+                    <span class="metric-val">{{ counts.destinations }}</span>
+                    <span class="metric-desc">Bấm để xem danh thắng</span>
+                  </div>
+                  <div class="metric-card" @click="currentTab = 'tours'">
+                    <span class="metric-label">Tour đang bán</span>
+                    <span class="metric-val">{{ counts.tours }}</span>
+                    <span class="metric-desc">Bấm để cấu hình lộ trình</span>
+                  </div>
+                  <div class="metric-card" @click="currentTab = 'bookings'">
+                    <span class="metric-label">Đơn đặt chỗ</span>
+                    <span class="metric-val">{{ counts.bookings }}</span>
+                    <span class="metric-desc">Bấm để kiểm tra thanh toán</span>
+                  </div>
+                  <div class="metric-card" @click="currentTab = 'reviews'">
+                    <span class="metric-label">Đánh giá khách hàng</span>
+                    <span class="metric-val">{{ counts.reviews }}</span>
+                    <span class="metric-desc">Bấm để kiểm duyệt phản hồi</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="metrics-grid">
-                <div class="metric-card" @click="currentTab = 'users'">
-                  <span class="metric-label">Tổng người dùng</span>
-                  <span class="metric-val">{{ counts.users }}</span>
-                  <span class="metric-desc">Bấm để quản lý tài khoản</span>
-                </div>
-                <div class="metric-card" @click="currentTab = 'destinations'">
-                  <span class="metric-label">Điểm đến</span>
-                  <span class="metric-val">{{ counts.destinations }}</span>
-                  <span class="metric-desc">Bấm để xem danh thắng</span>
-                </div>
-                <div class="metric-card" @click="currentTab = 'tours'">
-                  <span class="metric-label">Tour đang bán</span>
-                  <span class="metric-val">{{ counts.tours }}</span>
-                  <span class="metric-desc">Bấm để cấu hình lộ trình</span>
-                </div>
-                <div class="metric-card" @click="currentTab = 'bookings'">
-                  <span class="metric-label">Đơn đặt chỗ</span>
-                  <span class="metric-val">{{ counts.bookings }}</span>
-                  <span class="metric-desc">Bấm để kiểm tra thanh toán</span>
-                </div>
-                <div class="metric-card" @click="currentTab = 'reviews'">
-                  <span class="metric-label">Đánh giá khách hàng</span>
-                  <span class="metric-val">{{ counts.reviews }}</span>
-                  <span class="metric-desc">Bấm để kiểm duyệt phản hồi</span>
-                </div>
-              </div>
+              <!-- CÁC TAB CHỨC NĂNG CỤ THỂ -->
+              <AdminUsers v-else-if="currentTab === 'users'" />
+              <AdminDestinations v-else-if="currentTab === 'destinations'" />
+              <AdminTours v-else-if="currentTab === 'tours'" />
+              <AdminBookings v-else-if="currentTab === 'bookings'" />
+              <AdminReviews v-else-if="currentTab === 'reviews'" />
             </div>
-
-            <!-- CÁC TAB CHỨC NĂNG CỤ THỂ -->
-            <AdminUsers v-else-if="currentTab === 'users'" />
-            <AdminDestinations v-else-if="currentTab === 'destinations'" />
-            <AdminTours v-else-if="currentTab === 'tours'" />
-            <AdminBookings v-else-if="currentTab === 'bookings'" />
-            <AdminReviews v-else-if="currentTab === 'reviews'" />
           </div>
-        </div>
-      </main>
+        </main>
+      </template>
     </div>
   </div>
 </template>
@@ -114,6 +120,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import AdminNavbar from './components/AdminNavbar.vue';
+import AdminLogin from './components/AdminLogin.vue';
 import AdminUsers from './components/AdminUsers.vue';
 import AdminDestinations from './components/AdminDestinations.vue';
 import AdminTours from './components/AdminTours.vue';
@@ -121,6 +128,7 @@ import AdminBookings from './components/AdminBookings.vue';
 import AdminReviews from './components/AdminReviews.vue';
 import adminApi from './services/api';
 
+const isAuthenticated = ref(adminApi.isAuthenticated());
 const currentTab = ref('overview');
 
 // Danh sách hình nền danh thắng Việt Nam chạy liên tục giống phần User / Nhóm
@@ -144,6 +152,17 @@ const counts = ref({
   reviews: 2
 });
 
+const handleLoginSuccess = async (adminProfile) => {
+  isAuthenticated.value = true;
+  await reloadStats();
+};
+
+const handleLogout = () => {
+  adminApi.logout();
+  isAuthenticated.value = false;
+  currentTab.value = 'overview';
+};
+
 onMounted(async () => {
   // Chạy nền liên tục xoay vòng mỗi 6 giây giống trang user
   bgTimer = setInterval(() => {
@@ -154,7 +173,18 @@ onMounted(async () => {
     if (e.detail) currentTab.value = e.detail;
   });
 
-  await reloadStats();
+  window.addEventListener('admin-logged-in', async () => {
+    isAuthenticated.value = true;
+    await reloadStats();
+  });
+
+  window.addEventListener('admin-logged-out', () => {
+    isAuthenticated.value = false;
+  });
+
+  if (isAuthenticated.value) {
+    await reloadStats();
+  }
 });
 
 const reloadStats = async () => {

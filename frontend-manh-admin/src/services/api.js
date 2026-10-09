@@ -166,12 +166,69 @@ class AdminApiService {
     }
   }
 
+  isAuthenticated() {
+    return !!this.token && this.isTokenValid(this.token);
+  }
+
+  async login(account, password) {
+    const rawAccount = (account || '').trim();
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        account: rawAccount,
+        phone: rawAccount,
+        password: password
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      const err = new Error(data.message || 'Đăng nhập không thành công');
+      err.isLocked = data.isLocked || false;
+      err.remainingMinutes = data.remainingMinutes || 0;
+      err.remainingAttempts = data.remainingAttempts;
+      throw err;
+    }
+
+    const role = (data.user?.role || data.user?.Role || '').toUpperCase();
+    if (role !== 'ADMIN') {
+      throw new Error(`Tài khoản (${data.user?.phone || data.user?.email}) không có quyền Quản trị viên (Role: ${role || 'USER'}). Cổng này chỉ dành riêng cho Admin.`);
+    }
+
+    this.token = data.accessToken;
+    this.currentAdmin = {
+      userId: data.user.userId || data.user.UserID,
+      UserID: data.user.userId || data.user.UserID,
+      fullName: data.user.fullName || data.user.FullName,
+      FullName: data.user.fullName || data.user.FullName,
+      email: data.user.email || data.user.Email,
+      Email: data.user.email || data.user.Email,
+      phone: data.user.phone || data.user.Phone,
+      Phone: data.user.phone || data.user.Phone,
+      role: 'ADMIN',
+      Role: 'ADMIN',
+      avatarUrl: data.user.avatarUrl || data.user.AvatarURL,
+      AvatarURL: data.user.avatarUrl || data.user.AvatarURL
+    };
+
+    localStorage.setItem('admin_token', this.token);
+    localStorage.setItem('admin_profile', JSON.stringify(this.currentAdmin));
+    return this.currentAdmin;
+  }
+
+  logout() {
+    this.token = null;
+    this.currentAdmin = null;
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_profile');
+  }
+
   async ensureToken(forceRefresh = false) {
     if (!forceRefresh && this.isTokenValid(this.token)) {
       return this.token;
     }
     try {
-      const res = await fetch(`${API_BASE_URL}/admin-token`, {
+      const res = await fetch(`${API_BASE_URL}/auth/admin-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: this.currentAdmin?.userId || undefined })
@@ -226,7 +283,7 @@ class AdminApiService {
 
   async getAdmins() {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin-list`);
+      const res = await fetch(`${API_BASE_URL}/auth/admin-list`);
       const data = await res.json();
       if (data.success && data.data && data.data.length > 0) return data.data;
     } catch (e) {}
@@ -240,7 +297,7 @@ class AdminApiService {
 
   async switchAdmin(userId) {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin-token`, {
+      const res = await fetch(`${API_BASE_URL}/auth/admin-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
