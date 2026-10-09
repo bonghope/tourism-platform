@@ -11,7 +11,7 @@
         <div class="card-info">
           <h3 class="title">{{ tour.Title }}</h3>
           <div class="meta">
-            <span class="rating">⭐ {{ tour.AverageRating || '5.0' }} Tuyệt vời</span>
+            <span class="rating">{{ Number(tour.ReviewCount) > 0 ? '⭐ ' + Number(tour.AverageRating).toFixed(1) + ' (' + tour.ReviewCount + ' đánh giá)' : 'Chưa có đánh giá' }}</span>
             <span class="price">{{ formatPrice(tour.Price) }}</span>
           </div>
         </div>

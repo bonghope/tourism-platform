@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { syncRating } = require('../utils/tourRatings');
 const crypto = require('crypto');
 
 // ==========================================
@@ -158,14 +159,21 @@ const forceCancelBooking = async (req, res) => {
 // 5. QUẢN LÝ ĐÁNH GIÁ (REVIEWS)
 // ==========================================
 const hideReview = async (req, res) => {
+    let connection;
     try {
-        const { reviewId } = req.params;
-        // Ẩn bình luận rác
-        await pool.query("UPDATE Reviews SET Status = 'HIDDEN' WHERE ReviewID = ?", [reviewId]);
-        return res.status(200).json({ success: true, message: "Đã ẩn đánh giá vi phạm." });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: "Lỗi khi ẩn đánh giá." });
-    }
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [reviews] = await connection.query('SELECT TourID FROM Reviews WHERE ReviewID = ?', [req.params.reviewId]);
+        if (!reviews.length) throw new Error('Không tìm thấy đánh giá.');
+        await connection.query('SELECT TourID FROM Tours WHERE TourID = ? FOR UPDATE', [reviews[0].TourID]);
+        await connection.query("UPDATE Reviews SET Status = 'HIDDEN' WHERE ReviewID = ?", [req.params.reviewId]);
+        await syncRating(connection, reviews[0].TourID);
+        await connection.commit();
+        return res.status(200).json({ success:true, message:'Đã ẩn đánh giá vi phạm.' });
+    } catch(error) {
+        if (connection) await connection.rollback();
+        return res.status(400).json({ success:false, message:error.message });
+    } finally { if (connection) connection.release(); }
 };
 
 const replyReview = async (req, res) => {

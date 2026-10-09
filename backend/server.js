@@ -16,6 +16,7 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 require('./cron/cancelBooking');
 app.use(cors());
+app.use('/uploads/reviews', express.static(require('./utils/reviewImages').directory, { dotfiles:'deny', index:false, setHeaders:res => res.setHeader('X-Content-Type-Options','nosniff') }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

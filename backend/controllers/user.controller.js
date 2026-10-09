@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { ratingColumns } = require('../utils/tourRatings');
 
 // --- 1. LẤY & CẬP NHẬT HỒ SƠ KHÁCH HÀNG (USER PROFILE) ---
 const getProfile = async (req, res) => {
@@ -84,7 +85,7 @@ const getWishlist = async (req, res) => {
     try {
         const userId = req.user.userId;
         const query = `
-            SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.StartDate, t.AvailableSlots, t.AverageRating, f.SavedAt
+            SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.StartDate, t.AvailableSlots, ${ratingColumns()}, f.SavedAt
             FROM User_Favorite_Tours f
             JOIN Tours t ON f.TourID = t.TourID
             WHERE f.UserID = ?

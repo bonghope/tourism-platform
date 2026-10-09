@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { ratingColumns } = require('../utils/tourRatings');
 
 class DestinationController {
     // GET /api/destinations/search?keyword=...
@@ -34,7 +35,7 @@ class DestinationController {
             // 1. Ưu tiên gợi ý theo Địa danh yêu thích của User
             if (userId) {
                 const [destRows] = await pool.query(`
-                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
+                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, ${ratingColumns()}
                     FROM Tours t
                     INNER JOIN Tour_Destinations td ON t.TourID = td.TourID
                     INNER JOIN User_Favorite_Destinations fd ON td.DestinationID = fd.DestinationID
@@ -46,7 +47,7 @@ class DestinationController {
                 // 2. Nếu chưa có Địa danh yêu thích -> Gợi ý dựa trên Tour yêu thích của User
                 if (rows.length === 0) {
                     const [tourRows] = await pool.query(`
-                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
+                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, ${ratingColumns()}
                         FROM Tours t
                         WHERE (
                             t.TourID IN (SELECT TourID FROM User_Favorite_Tours WHERE UserID = ?)
@@ -70,7 +71,7 @@ class DestinationController {
             // 3. Fallback: Nếu không có hoặc khách chưa đăng nhập -> Lấy 4 tour nổi bật nhất
             if (rows.length === 0) {
                 const [fallbackRows] = await pool.query(`
-                    SELECT TourID, Title, Slug, Price, Duration, AverageRating, ReviewCount
+                    SELECT TourID, Title, Slug, Price, Duration, ${ratingColumns('Tours')}
                     FROM Tours
                     WHERE Status = 'PUBLISHED'
                     ORDER BY AverageRating DESC, ReviewCount DESC
@@ -125,7 +126,7 @@ class DestinationController {
             const destinationId = req.params.id;
             const userId = req.user ? req.user.userId : null;
 
-            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount`;
+            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t INNER JOIN Tour_Destinations td ON t.TourID = td.TourID`;
             const params = [];
 

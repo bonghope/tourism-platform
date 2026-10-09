@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { ratingColumns } = require('../utils/tourRatings');
 
 class TourController {
     // GET /api/tours - Lấy danh sách Tour (hỗ trợ lọc theo keyword, destination, giá, ngày)
@@ -7,7 +8,7 @@ class TourController {
             const { page = 1, limit = 10, destinationId, keyword, minPrice, maxPrice, startDate, endDate } = req.query;
             const userId = req.user ? req.user.userId : null;
 
-            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, t.AverageRating, t.ReviewCount`;
+            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t`;
             if (destinationId) {
                 fromClause += ` INNER JOIN Tour_Destinations td ON t.TourID = td.TourID`;
@@ -81,7 +82,7 @@ class TourController {
             const tourId = req.params.id;
             const userId = req.user ? req.user.userId : null;
 
-            let tourQuery = `SELECT t.*`;
+            let tourQuery = `SELECT t.*, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t`;
             const params = [tourId];
 
@@ -142,7 +143,7 @@ class TourController {
         try {
             const userId = req.user.userId;
             const query = `
-                SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount, f.SavedAt
+                SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, ${ratingColumns()}, f.SavedAt
                 FROM Tours t
                 INNER JOIN User_Favorite_Tours f ON t.TourID = f.TourID
                 WHERE f.UserID = ? AND t.Status = 'PUBLISHED'

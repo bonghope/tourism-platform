@@ -37,7 +37,7 @@
         <div class="main-info">
           <div class="badges">
             <span class="badge">{{ tour.Duration }}</span>
-            <span class="badge highlight">⭐ {{ tour.AverageRating || '5.0' }} ({{ tour.ReviewCount || 0 }} Đánh giá)</span>
+            <span class="badge highlight">{{ Number(tour.ReviewCount) > 0 ? '⭐ ' + Number(tour.AverageRating).toFixed(1) + ' (' + tour.ReviewCount + ' đánh giá)' : 'Chưa có đánh giá' }}</span>
           </div>
           <h1 class="title">{{ tour.Title }}</h1>
           

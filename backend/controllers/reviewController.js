@@ -1,13 +1,17 @@
 const pool = require('../config/database');
+const { syncRating } = require('../utils/tourRatings');
+const { decodeImages, saveImages, removeImages } = require('../utils/reviewImages');
 
 // 1. Khách hàng gửi đánh giá mới
 exports.createReview = async (req, res) => {
     const { bookingId, rating, content, images } = req.body;
     const userId = req.user.userId;
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || typeof content !== 'string' || !content.trim() || content.length > 5000 || (images !== undefined && (!Array.isArray(images) || images.length > 10))) return res.status(400).json({ success:false, message:'Đánh giá phải từ 1–5 sao, có nội dung tối đa 5000 ký tự và tối đa 10 ảnh.' });
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || typeof content !== 'string' || !content.trim() || content.length > 5000 || (images !== undefined && (!Array.isArray(images) || images.length > 5))) return res.status(400).json({ success:false, message:'Đánh giá phải từ 1–5 sao, có nội dung tối đa 5000 ký tự và tối đa 5 ảnh.' });
     let connection;
+    const savedImages = [];
 
     try {
+        const decodedImages = decodeImages(images);
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
@@ -45,7 +49,7 @@ exports.createReview = async (req, res) => {
         const daysDiff = timeDiff / (1000 * 3600 * 24);
         
         if (!Number.isFinite(daysDiff) || daysDiff < 0) throw new Error('Chuyến đi chưa kết thúc, chưa thể đánh giá.');
-        if (daysDiff > 30) throw new Error('Đã quá hạn 30 ngày để gửi đánh giá.');
+        if (daysDiff > 30) throw new Error('Ngoài thời gian đánh giá');
 
         // 4. Validate Tính duy nhất (1 Booking = 1 Review)
         const [existingReviews] = await connection.query(
@@ -64,29 +68,23 @@ exports.createReview = async (req, res) => {
             sanitizedContent = sanitizedContent.replace(regex, '***');
         });
 
+        const imageUrls = await saveImages(decodedImages, savedImages);
         // 6. Lưu vào cơ sở dữ liệu
         const reviewId = 'REV-' + Date.now();
         await connection.query(
             `INSERT INTO Reviews (ReviewID, BookingID, UserID, TourID, Rating, Content, Images, Status, CreatedAt, UpdatedAt) 
              VALUES (?, ?, ?, ?, ?, ?, ?, 'PUBLISHED', NOW(), NOW())`,
-            [reviewId, bookingId, userId, tourId, rating, sanitizedContent, JSON.stringify(images || [])]
+            [reviewId, bookingId, userId, tourId, rating, sanitizedContent, JSON.stringify(imageUrls)]
         );
 
-        // 7. Cập nhật phi chuẩn hóa vào bảng Tours (Tính lại điểm trung bình)
-        await connection.query(
-            `UPDATE Tours 
-             SET AverageRating = (COALESCE(TotalRatingPts, 0) + ?) / (COALESCE(ReviewCount, 0) + 1),
-                 TotalRatingPts = COALESCE(TotalRatingPts, 0) + ?,
-                 ReviewCount = COALESCE(ReviewCount, 0) + 1 
-             WHERE TourID = ?`,
-            [rating, rating, tourId]
-        );
+        await syncRating(connection, tourId);
 
         await connection.commit();
         res.status(201).json({ success: true, message: 'Cảm ơn bạn đã chia sẻ trải nghiệm!' });
 
     } catch (error) {
         if (connection) await connection.rollback();
+        await removeImages(savedImages);
         res.status(400).json({ success: false, message: error.message });
     } finally {
         if (connection) connection.release();
