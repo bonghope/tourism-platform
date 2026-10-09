@@ -20,7 +20,7 @@ import { ref, computed, onMounted } from 'vue';
 import { getBookings, money, date, statusLabel } from '../services/bookings';
 import '../styles/bookings.css';
 const bookings = ref([]), loading = ref(true), error = ref(''), search = ref(''), status = ref('');
-const statuses = ['PENDING', 'PAID', 'CANCELLED', 'REFUNDING', 'REFUNDED'];
+const statuses = ['PENDING', 'PAID', 'CANCELLED', 'REFUNDING', 'REFUNDED', 'COMPLETED'];
 const filtered = computed(() => bookings.value.filter(b => (!status.value || b.Status === status.value) && `${b.BookingID} ${b.Title}`.toLocaleLowerCase('vi').includes(search.value.trim().toLocaleLowerCase('vi'))));
 async function load() { loading.value = true; error.value = ''; try { bookings.value = await getBookings(); } catch(e) { error.value = e.message; } finally { loading.value = false; } }
 onMounted(load);

@@ -15,6 +15,9 @@ export const useToastStore = defineStore('toast', {
     success(message) {
       this.add(message, 'success');
     },
+    warning(message) {
+      this.add(message, 'warning');
+    },
     error(message) {
       this.add(message, 'error');
     },

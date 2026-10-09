@@ -2,9 +2,7 @@ const pool = require('../config/database');
 
 exports.createBooking = async (req, res) => {
     const { tourId,  passengerCount, contactName, contactPhone } = req.body;
-    // TODO: Tích hợp với Module Auth (Login). 
-    // Tạm thời lấy từ body để test, nếu không truyền sẽ mặc định là U04
-    const userId = req.body.userId || 'U04';
+    const userId = req.user.userId;
     let connection; // Khai báo ở đây để khối catch/finally có thể nhìn thấy
 
     try {
@@ -75,6 +73,9 @@ exports.paymentWebhook = async (req, res) => {
     let connection;
 
     // Giả lập kiểm tra Signature (Thực tế sẽ dùng HMAC SHA256 với Secret Key của VNPay/Momo)
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_DEMO_PAYMENT !== 'true') {
+        return res.status(503).json({ success: false, message: 'Thanh toán thử chưa được bật trên backend.' });
+    }
     const isValidSignature = signature === 'MOCK_VALID_SIGNATURE'; 
     if (!isValidSignature) {
         return res.status(403).json({ success: false, message: 'Chữ ký không hợp lệ!' });
@@ -84,10 +85,11 @@ exports.paymentWebhook = async (req, res) => {
         connection = await pool.getConnection();
         await connection.beginTransaction();
         const [bookings] = await connection.query(
-            "SELECT Status, HoldExpiresAt, TIMESTAMPDIFF(SECOND, NOW(), HoldExpiresAt) AS HoldRemainingSeconds FROM Bookings WHERE BookingID = ? FOR UPDATE", [bookingId]
+            "SELECT UserID, Status, HoldExpiresAt, TIMESTAMPDIFF(SECOND, NOW(), HoldExpiresAt) AS HoldRemainingSeconds FROM Bookings WHERE BookingID = ? FOR UPDATE", [bookingId]
         );
 
         if (bookings.length === 0) throw new Error('Không tìm thấy hóa đơn.');
+        if (bookings[0].UserID !== req.user.userId) throw new Error('Bạn không có quyền thanh toán đơn này.');
 
         // Tính luỹ đẳng (Idempotency): Nếu đã PAID rồi thì return 200 OK luôn, không làm gì cả
         if (bookings[0].Status === 'PAID') {
@@ -131,7 +133,7 @@ exports.cancelBookingByUser = async (req, res) => {
 
         // Lấy thông tin đơn hàng và nối với bảng Tours để check StartDate
         const [bookings] = await connection.query(
-            `SELECT b.Status, b.PassengerCount, b.TourID, t.StartDate 
+            `SELECT b.UserID, b.Status, b.PassengerCount, b.TourID, t.StartDate 
              FROM Bookings b JOIN Tours t ON b.TourID = t.TourID 
              WHERE b.BookingID = ? FOR UPDATE`,
             [bookingId]
@@ -139,6 +141,7 @@ exports.cancelBookingByUser = async (req, res) => {
 
         if (bookings.length === 0) throw new Error('Không tìm thấy hóa đơn.');
         const booking = bookings[0];
+        if (booking.UserID !== req.user.userId) throw new Error('Bạn không có quyền hủy đơn này.');
 
         if (booking.Status === 'PENDING') {
             // KỊCH BẢN 1: Hủy đơn PENDING -> CANCELLED, hoàn vé lập tức
@@ -188,7 +191,8 @@ exports.cancelBookingByUser = async (req, res) => {
 
 // Xem lịch sử đặt tour của một User
 exports.getUserBookings = async (req, res) => {
-    const { userId } = req.params;
+    const userId = req.user.userId;
+    if (req.params.userId !== userId) return res.status(403).json({ success:false, message:'Bạn không có quyền xem lịch sử này.' });
     let connection;
 
     try {
@@ -223,11 +227,11 @@ exports.getBookingDetails = async (req, res) => {
             `SELECT b.*,
                     DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
                     DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt,
-                    t.Title, t.StartDate, TIMESTAMPDIFF(SECOND, NOW(), b.HoldExpiresAt) AS HoldRemainingSeconds
+                    t.Title, t.StartDate, t.EndDate, EXISTS(SELECT 1 FROM Reviews r WHERE r.BookingID = b.BookingID) AS HasReview, TIMESTAMPDIFF(SECOND, NOW(), b.HoldExpiresAt) AS HoldRemainingSeconds
              FROM Bookings b 
              JOIN Tours t ON b.TourID = t.TourID 
-             WHERE b.BookingID = ?`,
-            [bookingId]
+             WHERE b.BookingID = ? AND b.UserID = ?`,
+            [bookingId, req.user.userId]
         );
 
         if (bookings.length === 0) {

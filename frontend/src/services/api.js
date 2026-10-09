@@ -1,5 +1,5 @@
 // API Service kết nối Backend cổng 3000 cho Khách hàng (Module 1)
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api').replace(/\/$/, '');
 
 class ApiService {
   constructor() {
@@ -16,7 +16,7 @@ class ApiService {
   }
 
   getToken() {
-    return this.token || localStorage.getItem('user_access_token');
+    return localStorage.getItem('user_access_token');
   }
 
   getAuthHeaders() {
@@ -37,22 +37,14 @@ class ApiService {
       payload = { phone: phoneOrObj, email, fullName, password };
     }
     try {
-      const res = await fetch(`${API_BASE_URL}/register`, {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       return await res.json();
     } catch (e) {
-      // Mock Fallback nếu Backend chưa bật
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      sessionStorage.setItem('temp_reg_otp', otp);
-      sessionStorage.setItem('temp_reg_data', JSON.stringify(payload));
-      return {
-        success: true,
-        message: 'Mã OTP xác thực đã được tạo (hiệu lực 5 phút).',
-        otp: otp
-      };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -65,25 +57,21 @@ class ApiService {
       payload = { phone: phoneOrObj, otp, password, fullName, email };
     }
     try {
-      const res = await fetch(`${API_BASE_URL}/verify-register-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-register-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       return await res.json();
     } catch (e) {
-      const saved = sessionStorage.getItem('temp_reg_otp');
-      if (saved && saved === (payload.otp || '').toString().trim()) {
-        return { success: true, message: 'Xác thực thành công! Tài khoản của bạn đã được kích hoạt.' };
-      }
-      return { success: false, message: 'Mã OTP không chính xác hoặc đã hết hạn.' };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
   // 2. Đăng nhập truyền thống (Ưu tiên Số điện thoại hoặc Email, Anti Brute-force 5 lần sai khóa 15p)
   async login(account, password) {
     try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -99,48 +87,28 @@ class ApiService {
       }
       return data;
     } catch (e) {
-      // Mock fallback
-      const token = 'mock-user-token-' + Date.now();
-      this.setToken(token);
-      return {
-        success: true,
-        message: 'Đăng nhập thành công.',
-        accessToken: token,
-        user: {
-          userId: 'usr-101',
-          fullName: 'Người dùng',
-          phone: account.match(/^[0-9+]+$/) ? account : '0912345678',
-          email: account.includes('@') ? account : null,
-          role: 'USER',
-          avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'
-        }
-      };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
   // 3a. Gửi OTP đến Gmail cho Đăng nhập Google
   async requestGoogleOtp(email) {
     try {
-      const res = await fetch(`${API_BASE_URL}/google-otp`, {
+      const res = await fetch(`${API_BASE_URL}/auth/google-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
       return await res.json();
     } catch (e) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      return {
-        success: true,
-        message: `Mã OTP đã được gửi đến Gmail ${email}.`,
-        otp: otp
-      };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
   // 3b. Đăng nhập Google (Tài khoản Gmail + Mật khẩu + OTP)
   async googleLogin(payload) {
     try {
-      const res = await fetch(`${API_BASE_URL}/google-login`, {
+      const res = await fetch(`${API_BASE_URL}/auth/google-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -151,20 +119,7 @@ class ApiService {
       }
       return data;
     } catch (e) {
-      const token = 'mock-google-token-' + Date.now();
-      this.setToken(token);
-      return {
-        success: true,
-        message: 'Đăng nhập Google SSO thành công.',
-        accessToken: token,
-        user: {
-          userId: 'usr-gg-1',
-          fullName: payload.fullName || 'Nguyễn Khách Hàng',
-          email: payload.email || 'traveler@gmail.com',
-          role: 'USER',
-          avatarUrl: payload.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
-        }
-      };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -181,16 +136,14 @@ class ApiService {
     };
 
     try {
-      const res = await fetch(`${API_BASE_URL}/forgot-password`, {
+      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       return await res.json();
     } catch (e) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      sessionStorage.setItem('temp_reset_otp', otp);
-      return { success: true, message: `Mã OTP khôi phục đã được tạo cho ${accountStr} (hiệu lực 5 phút).`, otp };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -209,14 +162,14 @@ class ApiService {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/reset-password`, {
+      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       return await res.json();
     } catch (e) {
-      return { success: true, message: 'Đặt lại mật khẩu mới thành công. Vui lòng đăng nhập lại.' };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -228,19 +181,7 @@ class ApiService {
       });
       return await res.json();
     } catch (e) {
-      return {
-        success: true,
-        user: {
-          UserID: 'usr-101',
-          FullName: 'Trần Thị Mai',
-          Email: 'mai.tran@gmail.com',
-          Phone: '0988776655',
-          AvatarURL: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-          Role: 'USER',
-          Status: 'ACTIVE',
-          CreatedAt: '2026-02-15T09:30:00Z'
-        }
-      };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -253,7 +194,7 @@ class ApiService {
       });
       return await res.json();
     } catch (e) {
-      return { success: true, message: 'Cập nhật hồ sơ thành công.' };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -267,7 +208,7 @@ class ApiService {
       });
       return await res.json();
     } catch (e) {
-      return { success: false, message: 'Lỗi kết nối khi gửi mã OTP email.' };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
@@ -281,21 +222,21 @@ class ApiService {
       });
       return await res.json();
     } catch (e) {
-      return { success: false, message: 'Lỗi kết nối khi xác thực OTP email.' };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 
   // 6. Đổi mật khẩu
   async changePassword(oldPassword, newPassword) {
     try {
-      const res = await fetch(`${API_BASE_URL}/change-password`, {
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
         body: JSON.stringify({ oldPassword, newPassword })
       });
       return await res.json();
     } catch (e) {
-      return { success: true, message: 'Đổi mật khẩu thành công.' };
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
     }
   }
 

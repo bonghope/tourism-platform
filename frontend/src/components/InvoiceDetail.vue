@@ -9,17 +9,21 @@
       <div class="columns"><div class="panel"><h2>{{ booking.Title }}</h2><span class="badge" :class="booking.Status">{{ statusLabel(booking.Status) }}</span><div class="detail-row"><span>Người liên hệ</span><strong>{{ booking.ContactName }}</strong></div><div class="detail-row"><span>Số điện thoại</span><strong>{{ booking.ContactPhone }}</strong></div><div class="detail-row"><span>Mã tour</span><router-link :to="`/tour/${booking.TourID}`">{{ booking.TourID }}</router-link></div><div v-if="booking.StartDate" class="detail-row"><span>Khởi hành</span><strong>{{ date(booking.StartDate) }}</strong></div><div class="detail-row"><span>Số khách</span><strong>{{ booking.PassengerCount }} người</strong></div><div class="detail-row"><span>Phương thức thanh toán</span><strong>{{ booking.PaymentMethod || 'Chưa thanh toán' }}</strong></div><div class="detail-row"><span>Mã giao dịch</span><strong>{{ booking.TransactionID || '—' }}</strong></div></div>
       <aside class="panel"><h2>Chi tiết thanh toán</h2><div class="detail-row"><span>Đơn giá / khách</span><strong>{{ money(booking.BasePrice) }}</strong></div><div class="detail-row"><span>Số lượng</span><strong>{{ booking.PassengerCount }}</strong></div><div class="detail-row"><span>Tổng tiền</span><strong class="total">{{ money(booking.TotalPrice) }}</strong></div><p v-if="booking.Status === 'PENDING'" class="muted">Giữ chỗ đến {{ date(booking.HoldExpiresAt) }}</p><div class="actions no-print"><router-link v-if="booking.Status === 'PENDING'" class="button primary" :to="`/payment/${booking.BookingID}`">Tiếp tục thanh toán</router-link><button class="button" @click="printInvoice">In hóa đơn</button><button v-if="canCancel" class="button danger" :disabled="busy" @click="confirming = true">Hủy đặt tour</button></div><p v-if="booking.Status === 'PAID'" class="muted no-print">Đơn đã thanh toán chỉ được hủy trước giờ khởi hành ít nhất 72 giờ.</p></aside></div>
       <div v-if="confirming" class="panel no-print" role="alertdialog" aria-label="Xác nhận hủy tour" style="margin-top:24px"><h2>Xác nhận hủy đặt tour?</h2><p>{{ booking.Status === 'PAID' ? 'Đơn sẽ chuyển sang chờ hoàn tiền nếu đủ điều kiện hủy.' : 'Chỗ đã giữ sẽ được trả lại sau khi hủy.' }}</p><div class="actions"><button class="button" :disabled="busy" @click="confirming = false">Giữ đơn</button><button class="button danger" :disabled="busy" @click="cancel">{{ busy ? 'Đang hủy…' : 'Xác nhận hủy' }}</button></div></div>
+      <ReviewForm v-if="canReview" :booking-id="booking.BookingID" :tour-id="booking.TourID" @submitted="load" />
+      <p v-else-if="booking.HasReview" class="message">Bạn đã đánh giá đơn này.</p>
     </template>
     <button v-if="error && !booking" class="button" @click="load">Thử lại</button>
   </section>
 </template>
 <script setup>
+import ReviewForm from './ReviewForm.vue';
 import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { getBooking, cancelBooking, money, date, statusLabel } from '../services/bookings';
 import '../styles/bookings.css';
 const route = useRoute(), booking = ref(null), loading = ref(true), error = ref(''), busy = ref(false), confirming = ref(false), message = ref('');
 const canCancel = computed(() => booking.value?.Status === 'PENDING' || (booking.value?.Status === 'PAID' && (!booking.value.StartDate || new Date(booking.value.StartDate).getTime() - Date.now() >= 72 * 3600000)));
+const canReview = computed(() => { const b = booking.value; if (!b || b.HasReview || !['PAID','COMPLETED'].includes(b.Status) || !b.EndDate) return false; const elapsed = Date.now() - new Date(b.EndDate).getTime(); return elapsed >= 0 && elapsed <= 30 * 86400000; });
 async function load() { loading.value = true; error.value = ''; booking.value = null; confirming.value = false; try { booking.value = await getBooking(route.params.bookingId); } catch(e) { error.value = e.message; } finally { loading.value = false; } }
 async function cancel() { busy.value = true; error.value = ''; try { const result = await cancelBooking(booking.value.BookingID); message.value = result.message; await load(); } catch(e) { error.value = e.message; } finally { busy.value = false; confirming.value = false; } }
 const printInvoice = () => window.print();

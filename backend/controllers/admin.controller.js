@@ -129,12 +129,13 @@ const forceCancelBooking = async (req, res) => {
         if (bookings.length === 0) throw new Error("Không tìm thấy đơn hàng");
         const booking = bookings[0];
 
-        if (booking.Status === 'CANCELLED' || booking.Status === 'REFUNDED') {
+        if (!['PENDING', 'PAID'].includes(booking.Status)) {
+            await connection.rollback();
             return res.status(400).json({ success: false, message: "Đơn hàng này đã bị hủy từ trước." });
         }
 
         // Cập nhật trạng thái thành REFUNDING (Chờ hoàn tiền)
-        await connection.query("UPDATE Bookings SET Status = 'REFUNDING' WHERE BookingID = ?", [bookingId]);
+        await connection.query("UPDATE Bookings SET Status = ? WHERE BookingID = ?", [booking.Status === 'PENDING' ? 'CANCELLED' : 'REFUNDING', bookingId]);
 
         // Hoàn trả lại số chỗ trống (AvailableSlots) cho Tour
         await connection.query(
@@ -232,29 +233,31 @@ const updateDestination = async (req, res) => {
 // BỔ SUNG: CẬP NHẬT TOUR & VÒNG ĐỜI TOUR
 // ==========================================
 const updateTour = async (req, res) => {
+    let connection;
     try {
         const { tourId } = req.params;
         const { title, slug, price, startDate, duration, maxSlots, status, itinerary } = req.body;
-        const itineraryJson = itinerary !== undefined ? (typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary)) : null;
-
-        await pool.query(
-            `UPDATE Tours 
-             SET Title = COALESCE(?, Title), 
-                 Slug = COALESCE(?, Slug), 
-                 Price = COALESCE(?, Price), 
-                 StartDate = COALESCE(?, StartDate), 
-                 Duration = COALESCE(?, Duration), 
-                 MaxSlots = COALESCE(?, MaxSlots), 
-                 Status = COALESCE(?, Status),
-                 Itinerary = COALESCE(?, Itinerary)
-             WHERE TourID = ?`,
-            [title || null, slug || null, price || null, startDate || null, duration || null, maxSlots || null, status || null, itineraryJson, tourId]
+        if (maxSlots !== undefined && (!Number.isInteger(Number(maxSlots)) || Number(maxSlots) < 1)) throw new Error('Sức chứa phải là số nguyên dương.');
+        if (price !== undefined && (!Number.isFinite(Number(price)) || Number(price) <= 0)) throw new Error('Giá tiền phải lớn hơn 0.');
+        if (status && !['DRAFT','PUBLISHED','HIDDEN'].includes(status)) throw new Error('Trạng thái tour không hợp lệ.');
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [tours] = await connection.query('SELECT MaxSlots, AvailableSlots FROM Tours WHERE TourID = ? FOR UPDATE', [tourId]);
+        if (!tours.length) throw new Error('Không tìm thấy tour.');
+        const used = Number(tours[0].MaxSlots) - Number(tours[0].AvailableSlots);
+        if (maxSlots !== undefined && Number(maxSlots) < used) throw new Error('Sức chứa không được nhỏ hơn số chỗ đã giữ/đã bán (' + used + ').');
+        const slots = maxSlots === undefined ? Number(tours[0].AvailableSlots) : Number(maxSlots) - used;
+        const itineraryJson = itinerary === undefined ? null : typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary);
+        await connection.query(
+            'UPDATE Tours SET Title = COALESCE(?, Title), Slug = COALESCE(?, Slug), Price = COALESCE(?, Price), StartDate = COALESCE(?, StartDate), Duration = COALESCE(?, Duration), MaxSlots = COALESCE(?, MaxSlots), AvailableSlots = ?, Status = COALESCE(?, Status), Itinerary = COALESCE(?, Itinerary) WHERE TourID = ?',
+            [title ?? null, slug ?? null, price ?? null, startDate ?? null, duration ?? null, maxSlots ?? null, slots, status ?? null, itineraryJson, tourId]
         );
-        return res.status(200).json({ success: true, message: "Cập nhật Tour thành công!" });
+        await connection.commit();
+        return res.status(200).json({ success:true, message:'Cập nhật tour thành công!' });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ success: false, message: "Lỗi khi cập nhật Tour." });
-    }
+        if (connection) await connection.rollback();
+        return res.status(400).json({ success:false, message:error.message });
+    } finally { if (connection) connection.release(); }
 };
 
 const updateTourStatus = async (req, res) => {

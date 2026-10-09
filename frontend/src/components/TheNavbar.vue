@@ -9,7 +9,7 @@
       <router-link to="/tours">Tour</router-link>
       <router-link to="/destinations">Điểm đến</router-link>
       <a href="#promo-adventure-section" @click="scrollToPromo">Khuyến mãi</a>
-      <router-link to="/bookings">Lịch sử đặt tour</router-link>
+
       <router-link to="/about">Về chúng tôi</router-link>
     </div>
 
@@ -28,6 +28,7 @@
           <router-link to="/profile" class="pop-link" @click="menuOpen = false">
             Hồ sơ cá nhân
           </router-link>
+          <router-link to="/bookings" class="pop-link" @click="menuOpen = false">Lịch sử đặt tour</router-link>
           <div class="pop-divider"></div>
           <button class="pop-link pop-logout" @click="handleLogout">
             Đăng xuất
@@ -71,9 +72,9 @@ const openAuthModal = (tab) => {
   isAuthOpen.value = true;
 };
 
-const handleLogout = () => {
+const handleLogout = async () => {
   menuOpen.value = false;
-  authStore.logout();
+  await authStore.logout();
   toastStore.info('Đã đăng xuất.');
   router.push('/');
 };

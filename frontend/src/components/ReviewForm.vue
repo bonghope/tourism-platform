@@ -49,6 +49,8 @@
 
 <script setup>
 import { ref } from 'vue';
+import { request } from '../services/bookings';
+const emit = defineEmits(['submitted']);
 
 const props = defineProps({
   bookingId: { type: String, required: true },
@@ -70,27 +72,16 @@ const submitReview = async () => {
   errorMsg.value = '';
 
   try {
-    const res = await fetch('http://localhost:3000/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bookingId: props.bookingId,
-        tourId: props.tourId,
-        userId: 'U14', // Đang fix cứng User U14 để test
-        rating: form.value.rating,
-        comment: form.value.comment
-      })
-    });
-    
-    const json = await res.json();
+    const json = await request('/reviews', { method:'POST', body:JSON.stringify({ bookingId:props.bookingId, tourId:props.tourId, rating:form.value.rating, content:form.value.comment }) });
     if (json.success) {
-      successMsg.value = 'Cảm ơn bạn đã gửi đánh giá! Review của bạn đã được ghi nhận.';
+      successMsg.value = 'Cảm ơn bạn đã gửi đánh giá!';
+      emit('submitted');
     } else {
       // Backend M4 sẽ trả về lỗi nếu: Đơn chưa hoàn thành, Đã quá 30 ngày, hoặc Đã đánh giá rồi
       errorMsg.value = json.message;
     }
   } catch (err) {
-    errorMsg.value = 'Lỗi kết nối Máy chủ. Vui lòng thử lại sau.';
+    errorMsg.value = err.message;
   } finally {
     isSubmitting.value = false;
   }

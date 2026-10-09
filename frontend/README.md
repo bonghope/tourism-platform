@@ -50,3 +50,5 @@ Có thể sao chép `.env.example` thành `.env.local` và cấu hình `VITE_API
 Backend hiện chưa tạo URL thanh toán thật hoặc xác minh chữ ký từ VNPAY/MoMo; cần tích hợp nhà cung cấp trước khi triển khai thanh toán thực tế.
 
 Ngày tạo đơn và hạn giữ chỗ được lưu theo UTC trong MySQL hiện tại. API booking xuất hai trường này thành ISO 8601 có hậu tố Z; các màn hình booking hiển thị theo Asia/Ho_Chi_Minh (UTC+7). Khởi động lại backend sau khi cập nhật để áp dụng cách xuất thời gian.
+
+Booking và review hiện yêu cầu JWT đăng nhập, mỗi tài khoản chỉ truy cập đơn của mình. Lịch sử nằm trong menu user. Để thử thanh toán local: backend đặt ENABLE_DEMO_PAYMENT=true (không dùng NODE_ENV=production), frontend đặt VITE_ENABLE_DEMO_PAYMENT=true. Webhook thử yêu cầu JWT và quyền sở hữu đơn; production chặn webhook giả lập. Cổng thanh toán thật chưa tích hợp.

@@ -113,6 +113,11 @@ body {
   border-left: 4px solid #ef4444;
   color: #991b1b;
 }
+.toast-item.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border-left: 4px solid #f59e0b;
+}
 .toast-item.info {
   border-left: 4px solid #2563eb;
   color: #1e40af;

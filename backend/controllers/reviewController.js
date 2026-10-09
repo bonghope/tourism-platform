@@ -2,7 +2,9 @@ const pool = require('../config/database');
 
 // 1. Khách hàng gửi đánh giá mới
 exports.createReview = async (req, res) => {
-    const { userId, bookingId, tourId, rating, content, images } = req.body;
+    const { bookingId, rating, content, images } = req.body;
+    const userId = req.user.userId;
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || typeof content !== 'string' || !content.trim() || content.length > 5000 || (images !== undefined && (!Array.isArray(images) || images.length > 10))) return res.status(400).json({ success:false, message:'Đánh giá phải từ 1–5 sao, có nội dung tối đa 5000 ký tự và tối đa 10 ảnh.' });
     let connection;
 
     try {
@@ -11,7 +13,7 @@ exports.createReview = async (req, res) => {
 
         // 1. Lấy thông tin đơn hàng và ngày kết thúc Tour
         const [bookings] = await connection.query(
-            `SELECT b.Status, b.UserID, t.EndDate 
+            `SELECT b.Status, b.UserID, b.TourID, t.EndDate 
              FROM Bookings b 
              JOIN Tours t ON b.TourID = t.TourID 
              WHERE b.BookingID = ? FOR UPDATE`,
@@ -20,6 +22,9 @@ exports.createReview = async (req, res) => {
 
         if (bookings.length === 0) throw new Error('Không tìm thấy đơn hàng.');
         const booking = bookings[0];
+        const tourId = booking.TourID;
+        if (req.body.tourId && req.body.tourId !== tourId) throw new Error('Tour không khớp với đơn đặt.');
+        if (!['PAID','COMPLETED'].includes(booking.Status) || !booking.EndDate) throw new Error('Đơn chưa đủ điều kiện đánh giá.');
 
         // 2. Validate Quyền Đánh giá (Pre-condition)
         if (booking.UserID !== userId) {
@@ -39,7 +44,7 @@ exports.createReview = async (req, res) => {
         const timeDiff = new Date().getTime() - new Date(booking.EndDate).getTime();
         const daysDiff = timeDiff / (1000 * 3600 * 24);
         
-        if (daysDiff < 0) throw new Error('Chuyến đi chưa kết thúc, chưa thể đánh giá.');
+        if (!Number.isFinite(daysDiff) || daysDiff < 0) throw new Error('Chuyến đi chưa kết thúc, chưa thể đánh giá.');
         if (daysDiff > 30) throw new Error('Đã quá hạn 30 ngày để gửi đánh giá.');
 
         // 4. Validate Tính duy nhất (1 Booking = 1 Review)
@@ -53,7 +58,7 @@ exports.createReview = async (req, res) => {
 
         // 5. Sanitize Content (Lọc từ ngữ thô tục cơ bản - Profanity Check)
         const forbiddenWords = ['lừa đảo', 'tồi tệ', 'chửi thề']; 
-        let sanitizedContent = content;
+        let sanitizedContent = content.trim();
         forbiddenWords.forEach(word => {
             const regex = new RegExp(word, 'gi');
             sanitizedContent = sanitizedContent.replace(regex, '***');
@@ -70,9 +75,9 @@ exports.createReview = async (req, res) => {
         // 7. Cập nhật phi chuẩn hóa vào bảng Tours (Tính lại điểm trung bình)
         await connection.query(
             `UPDATE Tours 
-             SET TotalRatingPts = TotalRatingPts + ?, 
-                 ReviewCount = ReviewCount + 1, 
-                 AverageRating = (TotalRatingPts + ?) / (ReviewCount + 1) 
+             SET AverageRating = (COALESCE(TotalRatingPts, 0) + ?) / (COALESCE(ReviewCount, 0) + 1),
+                 TotalRatingPts = COALESCE(TotalRatingPts, 0) + ?,
+                 ReviewCount = COALESCE(ReviewCount, 0) + 1 
              WHERE TourID = ?`,
             [rating, rating, tourId]
         );
@@ -93,8 +98,8 @@ exports.getTourReviews = async (req, res) => {
     const { tourId } = req.params;
     
     // Nhận tham số page và limit từ URL query (Mặc định: trang 1, 10 đánh giá/trang)
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
     const offset = (page - 1) * limit;
 
     let connection;
@@ -104,7 +109,7 @@ exports.getTourReviews = async (req, res) => {
         
         // Truy vấn dữ liệu có sử dụng LIMIT và OFFSET để phân trang
         const [reviews] = await connection.query(
-            `SELECT r.ReviewID, r.Rating, r.Content, r.Images, r.OwnerReply, r.CreatedAt, u.FullName 
+            `SELECT r.ReviewID, r.Rating, r.Content, r.Images, r.OwnerReply, DATE_FORMAT(r.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt, u.FullName 
              FROM Reviews r 
              JOIN Users u ON r.UserID = u.UserID 
              WHERE r.TourID = ? AND r.Status = 'PUBLISHED' 

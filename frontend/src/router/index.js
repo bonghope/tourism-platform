@@ -65,4 +65,8 @@ const router = createRouter({
     routes
 });
 
+router.beforeEach(to => {
+    const privatePage = ['BookingHistory','InvoiceDetail','Payment','BookingCheckout','UserProfile','Wishlist'].includes(to.name);
+    if (privatePage && !localStorage.getItem('user_access_token')) { alert('Vui lòng đăng nhập để tiếp tục.'); return { path:'/', query:{ redirect:to.fullPath } }; }
+});
 export default router;

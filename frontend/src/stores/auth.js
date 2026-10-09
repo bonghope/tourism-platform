@@ -22,8 +22,8 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user_session', JSON.stringify(userData));
       if (token) localStorage.setItem('user_access_token', token);
     },
-    logout() {
-      api.logout();
+    async logout() {
+      await api.logout();
       this.user = null;
       this.token = null;
       localStorage.removeItem('user_session');

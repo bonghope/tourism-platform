@@ -67,11 +67,13 @@
           </div>
         </div>
       </div>
+      <TourReviews :tour-id="tour.TourID" />
     </div>
   </div>
 </template>
 
 <script setup>
+import TourReviews from './TourReviews.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 
