@@ -10,6 +10,7 @@ const tourRoutes = require('./routes/tourRoutes');
 const destinationRoutes = require('./routes/destinationRoutes');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const adminRoutes = require('./routes/admin.routes');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -36,6 +37,7 @@ app.get('/', (req, res) => {
 // API endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/tours', tourRoutes);
