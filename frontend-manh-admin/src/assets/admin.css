@@ -1,23 +1,30 @@
 :root {
-  --primary-color: #2563eb;
-  --primary-hover: #1d4ed8;
+  --primary-color: #007d68;
+  --primary-hover: #006050;
+  --primary-mint: #00b99a;
+  --primary-light: #e6f7f2;
+  --primary-gradient: linear-gradient(135deg, #00b99a 0%, #007d68 100%);
   --secondary-color: #0f172a;
   --accent-color: #f59e0b;
   --bg-color: #f8fafc;
-  --card-bg: rgba(255, 255, 255, 0.85);
+  --page-background:
+    radial-gradient(ellipse at 0% 25%, rgba(201, 243, 230, 0.26) 0%, transparent 48%),
+    radial-gradient(ellipse at 100% 80%, rgba(255, 226, 189, 0.23) 0%, transparent 48%),
+    linear-gradient(to right, #f9fdfb 0%, #ffffff 45%, #ffffff 55%, #fffdf8 100%);
+  --card-bg: rgba(255, 255, 255, 0.88);
   --card-solid: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border-color: #e2e8f0;
   
-  --success-color: #10b981;
-  --success-bg: #ecfdf5;
+  --success-color: #007d68;
+  --success-bg: #e6f7f2;
   --danger-color: #ef4444;
   --danger-bg: #fef2f2;
   --warning-color: #f59e0b;
   --warning-bg: #fffbeb;
-  --info-color: #0284c7;
-  --info-bg: #f0f9ff;
+  --info-color: #00b99a;
+  --info-bg: #ecfdf5;
   
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07);

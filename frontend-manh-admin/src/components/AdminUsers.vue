@@ -518,7 +518,7 @@ onUnmounted(() => {
 }
 
 .row-admin {
-  background: rgba(37, 99, 235, 0.03);
+  background: rgba(0, 125, 104, 0.04);
 }
 
 .action-cell-btns {
@@ -529,9 +529,9 @@ onUnmounted(() => {
 }
 
 .btn-role-promote {
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
+  border: 1px solid rgba(0, 185, 154, 0.3);
   font-size: 0.76rem;
   font-weight: 700;
   padding: 4px 10px;
@@ -541,7 +541,7 @@ onUnmounted(() => {
 }
 
 .btn-role-promote:hover {
-  background: #2563eb;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
 }
 

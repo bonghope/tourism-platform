@@ -18,17 +18,40 @@
 
     <div class="panel-toolbar">
       <div class="toolbar-title">
-        <h2>Quản lý Điểm đến</h2>
-        <p>Quản lý danh sách các địa danh và danh lam thắng cảnh trong hệ thống</p>
+        <div class="title-with-badge">
+          <h2>Quản lý Điểm đến</h2>
+          <span class="count-pill">{{ filteredDestinations.length }} địa danh</span>
+        </div>
+        <p>Quản lý danh sách các địa danh và danh lam thắng cảnh trong hệ thống TaVivu</p>
       </div>
-      <button class="btn btn-primary" @click="openCreateModal">
-        + Thêm điểm đến mới
-      </button>
+      <div class="toolbar-actions">
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            v-model="searchKeyword" 
+            type="text" 
+            placeholder="Tìm theo tên, slug, từ khóa..." 
+            class="search-input"
+          />
+          <button v-if="searchKeyword" class="search-clear-btn" type="button" @click="searchKeyword = ''">✕</button>
+        </div>
+        <button class="btn btn-primary" @click="openCreateModal">
+          + Thêm điểm đến mới
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="state-box">
       <div class="spinner"></div>
       <p style="margin-top: 12px; color: #64748b;">Đang tải danh sách điểm đến...</p>
+    </div>
+
+    <div v-else-if="filteredDestinations.length === 0" class="state-box">
+      <p style="font-weight: 600; color: #475569;">Không tìm thấy điểm đến nào phù hợp với "{{ searchKeyword }}"</p>
+      <button class="btn btn-outline btn-sm" style="margin-top: 10px;" @click="searchKeyword = ''">Đặt lại bộ lọc</button>
     </div>
 
     <div v-else class="table-responsive">
@@ -44,7 +67,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="d in destinations" :key="d.DestinationID">
+          <tr v-for="d in filteredDestinations" :key="d.DestinationID">
             <td>
               <div class="dest-info-cell">
                 <img 
@@ -142,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import adminApi from '../services/api';
 
 const defaultDestImg = 'https://images.unsplash.com/photo-1528127269322-539801943592?w=800';
@@ -154,8 +177,21 @@ const onImgError = (e) => {
 };
 
 const destinations = ref([]);
+const searchKeyword = ref('');
 const loading = ref(false);
 const submitLoading = ref(false);
+
+const filteredDestinations = computed(() => {
+  if (!searchKeyword.value.trim()) return destinations.value;
+  const q = searchKeyword.value.toLowerCase().trim();
+  return destinations.value.filter(d => {
+    const name = (d.Name || '').toLowerCase();
+    const slug = (d.Slug || '').toLowerCase();
+    const keywords = (d.Keywords || '').toLowerCase();
+    const desc = (d.Description || '').toLowerCase();
+    return name.includes(q) || slug.includes(q) || keywords.includes(q) || desc.includes(q);
+  });
+});
 
 const showModal = ref(false);
 const isEditing = ref(false);
@@ -328,10 +364,78 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.count-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary-color, #007d68);
+  background: var(--primary-light, #e6f7f2);
+  border: 1px solid rgba(0, 185, 154, 0.25);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
 .toolbar-title p {
   font-size: 0.85rem;
   color: #64748b;
   margin-top: 2px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-input {
+  padding: 8px 32px 8px 36px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  min-width: 260px;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: var(--primary-mint, #00b99a);
+  box-shadow: 0 0 0 3px rgba(0, 185, 154, 0.15);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px;
+}
+
+.search-clear-btn:hover {
+  color: #ef4444;
 }
 
 .dest-info-cell {
@@ -373,11 +477,13 @@ onMounted(() => {
 
 .slug-tag {
   font-size: 0.78rem;
-  color: #2563eb;
-  background: #eff6ff;
-  padding: 2px 6px;
-  border-radius: 4px;
+  color: var(--primary-color, #007d68);
+  background: var(--primary-light, #e6f7f2);
+  border: 1px solid rgba(0, 185, 154, 0.25);
+  padding: 2px 8px;
+  border-radius: 6px;
   font-family: monospace;
+  font-weight: 600;
 }
 
 .desc-text {

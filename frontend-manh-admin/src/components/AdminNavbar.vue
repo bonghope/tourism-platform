@@ -2,7 +2,8 @@
   <header class="admin-header glass-panel">
     <div class="header-left">
       <div class="brand-title">
-        <span class="brand-logo">TaVivu</span>
+        <img src="/images/logo-mint.png" class="brand-logo-img" alt="TaVivu" />
+        <span class="brand-logo-text">TaVivu</span>
         <span class="portal-tag">ADMIN PORTAL</span>
       </div>
     </div>
@@ -196,20 +197,27 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-.brand-logo {
-  font-size: 1.45rem;
+.brand-logo-img {
+  width: 48px;
+  height: 36px;
+  object-fit: contain;
+  filter: brightness(0.85) saturate(1.1);
+}
+
+.brand-logo-text {
+  font-size: 1.55rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--primary-mint, #00b99a);
   letter-spacing: -0.5px;
 }
 
 .portal-tag {
   font-size: 0.72rem;
   font-weight: 800;
-  background: #0f172a;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   letter-spacing: 0.8px;
 }
 
@@ -248,7 +256,7 @@ onUnmounted(() => {
   height: 38px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #2563eb;
+  border: 2px solid var(--primary-color, #007d68);
 }
 
 .admin-meta {
@@ -273,9 +281,9 @@ onUnmounted(() => {
 .admin-badge {
   font-size: 0.65rem;
   font-weight: 800;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
+  border: 1px solid rgba(0, 185, 154, 0.25);
   padding: 1px 6px;
   border-radius: 10px;
   letter-spacing: 0.4px;
@@ -336,8 +344,8 @@ onUnmounted(() => {
 .header-count {
   font-size: 0.7rem;
   font-weight: 700;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
   padding: 2px 7px;
   border-radius: 10px;
 }
@@ -365,8 +373,8 @@ onUnmounted(() => {
 }
 
 .admin-item.active {
-  background: #eff6ff;
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: var(--primary-light, #e6f7f2);
+  border: 1px solid rgba(0, 185, 154, 0.25);
 }
 
 .item-avatar {
@@ -417,7 +425,7 @@ onUnmounted(() => {
 .check-icon {
   font-size: 0.9rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
 }
 
 .dropdown-footer {

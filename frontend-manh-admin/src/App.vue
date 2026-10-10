@@ -317,9 +317,9 @@ onUnmounted(() => {
 }
 
 .nav-tab-item.active {
-  background: var(--primary-color);
+  background: var(--primary-gradient, linear-gradient(135deg, #00b99a 0%, #007d68 100%));
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.35);
 }
 
 .admin-viewport {
@@ -372,8 +372,8 @@ onUnmounted(() => {
 
 .metric-card:hover {
   transform: translateY(-4px);
-  border-color: var(--primary-color);
-  box-shadow: 0 12px 24px -4px rgba(37, 99, 235, 0.18);
+  border-color: var(--primary-mint, #00b99a);
+  box-shadow: 0 12px 24px -4px rgba(0, 125, 104, 0.18);
 }
 
 .metric-label {

@@ -4,6 +4,7 @@
       <!-- Header Brand -->
       <div class="login-header">
         <div class="brand-badge-row">
+          <img src="/images/logo-mint.png" class="login-brand-logo-img" alt="TaVivu" />
           <span class="brand-name">TaVivu</span>
           <span class="portal-badge">ADMIN PORTAL</span>
         </div>
@@ -224,15 +225,20 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.login-brand-logo-img {
+  width: 52px;
+  height: 40px;
+  object-fit: contain;
+  filter: brightness(0.9) saturate(1.15);
 }
 
 .brand-name {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #00b99a;
   letter-spacing: -0.5px;
 }
 
@@ -242,7 +248,7 @@ const handleLogin = async () => {
   letter-spacing: 0.08em;
   padding: 3px 9px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #007d68;
   color: #ffffff;
 }
 
@@ -376,9 +382,9 @@ const handleLogin = async () => {
 }
 
 .form-input:focus {
-  border-color: #3b82f6;
+  border-color: #00b99a;
   background: rgba(30, 41, 59, 0.95);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 3px rgba(0, 185, 154, 0.25);
 }
 
 .btn-toggle-eye {
@@ -420,12 +426,12 @@ const handleLogin = async () => {
   font-size: 0.95rem;
   font-weight: 700;
   margin-top: 4px;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #00b99a 0%, #007d68 100%);
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.35);
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #00a88a 0%, #006050 100%);
   transform: translateY(-1px);
 }
 

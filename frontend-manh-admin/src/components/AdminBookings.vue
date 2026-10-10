@@ -120,7 +120,7 @@
             <div class="detail-summary">
               <div>Chuyến đi: <strong>{{ bookingToCancel.TourTitle }}</strong></div>
               <div>Số chỗ hoàn trả vào Tour: <strong style="color: #10b981;">+{{ bookingToCancel.PassengerCount }} chỗ</strong></div>
-              <div>Số tiền hoàn lại: <strong style="color: #2563eb;">{{ formatMoney(bookingToCancel.TotalPrice) }}</strong></div>
+              <div>Số tiền hoàn lại: <strong style="color: var(--primary-color, #007d68);">{{ formatMoney(bookingToCancel.TotalPrice) }}</strong></div>
             </div>
             <div class="warning-box">
               Cơ chế bảo đảm an toàn giao dịch: Backend sẽ khóa dòng dữ liệu (Row-level lock), cập nhật trạng thái đơn sang REFUNDING và tự động hoàn trả số lượng vé trống (AvailableSlots) cho Tour.
@@ -328,7 +328,7 @@ onMounted(() => {
 
 .booking-code {
   font-weight: 700;
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
 }
 
 .customer-info, .tour-info, .price-stack {
@@ -357,7 +357,7 @@ onMounted(() => {
 .payment-method {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
 }
 
 .detail-summary {
