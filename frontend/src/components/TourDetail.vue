@@ -11,6 +11,17 @@
     </div>
 
     <div v-else-if="tour" class="detail-container">
+      <!-- Nút quay lại danh sách tour (giữ nguyên bộ lọc) -->
+      <div class="top-back-bar">
+        <button class="btn-back-to-tours" @click="handleBackToTours">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Quay lại danh sách chuyến đi
+        </button>
+      </div>
+
       <!-- Khung Hình ảnh -->
       <div class="gallery">
         <img 
@@ -104,11 +115,20 @@
 import TourReviews from './TourReviews.vue';
 import PhotoCredit from './PhotoCredit.vue';
 import { ref, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const defaultTourCover = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=1200&q=80';
 
 const route = useRoute();
+const router = useRouter();
+
+const handleBackToTours = () => {
+  if (route.query && Object.keys(route.query).length > 0) {
+    router.push({ path: '/tours', query: route.query });
+  } else {
+    router.push('/tours');
+  }
+};
 const tour = ref(null);
 const departureId = ref('');
 const selectedDeparture = computed(() => tour.value?.departures?.find(d => d.DepartureID === departureId.value));
@@ -389,5 +409,33 @@ watch(() => route.params.id, fetchTourDetail, { immediate: true });
   border-radius: var(--radius-lg);
   color: var(--text-muted);
   border: 1px dashed #cbd5e1;
+}
+
+.top-back-bar {
+  margin-bottom: 20px;
+}
+
+.btn-back-to-tours {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #ffffff;
+  border: 1.5px solid #cce5dc;
+  border-radius: 12px;
+  color: #007d68;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.08);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-back-to-tours:hover {
+  background: #eef8f4;
+  border-color: #007d68;
+  transform: translateX(-4px);
+  box-shadow: 0 6px 18px rgba(0, 125, 104, 0.15);
 }
 </style>

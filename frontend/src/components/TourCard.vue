@@ -1,5 +1,5 @@
 <template>
-  <div class="tour-card" @click="$router.push(`/tour/${tour.TourID}`)">
+  <div class="tour-card" @click="$router.push({ path: `/tour/${tour.TourID}`, query: $route.query })">
     <div class="card-image-wrapper">
       <span v-if="discountPercent > 0" class="discount-badge">Giảm {{ discountPercent }}%</span>
       <img 

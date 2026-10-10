@@ -68,7 +68,7 @@
             </div>
 
             <div class="info-list">
-              <div class="info-item">
+              <div v-if="authStore.isAdmin" class="info-item">
                 <span class="info-label">Mã khách hàng:</span>
                 <span class="info-value font-mono">{{ profile.UserID }}</span>
               </div>

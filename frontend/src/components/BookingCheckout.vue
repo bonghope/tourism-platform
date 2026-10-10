@@ -59,7 +59,7 @@
         <div class="summary-content">
           <h3>{{ tour.Title }}</h3>
           <ul class="summary-details">
-            <li><strong>Mã Tour:</strong> {{ tour.TourID }}</li>
+            <li v-if="authStore.isAdmin"><strong>Mã Tour:</strong> {{ tour.TourID }}</li>
             <li><strong>Khởi hành:</strong> {{ formatDate(selectedDeparture?.StartDate) }}</li>
             <li><strong>Còn trống:</strong> {{ (selectedDeparture?.AvailableSlots || 0) }} chỗ</li>
           </ul>
@@ -83,7 +83,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { request, userId } from '../services/bookings';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth';
 
+const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const defaultImage = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80';
