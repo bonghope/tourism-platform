@@ -56,23 +56,14 @@
               </div>
             </td>
             <td>
-              <div v-if="t.DiscountPercent > 0 || (t.OriginalPrice && Number(t.OriginalPrice) > Number(t.Price))" class="table-price-stack">
-                <div class="table-old-row">
-                  <span class="table-old-price">{{ formatMoney(t.OriginalPrice || t.Price) }}</span>
-                  <span class="table-discount-pill">-{{ t.DiscountPercent || Math.round((1 - t.Price / t.OriginalPrice) * 100) }}%</span>
-                </div>
-                <div class="table-new-price">{{ formatMoney(t.Price) }}</div>
-              </div>
-              <div v-else>
-                <span class="price-highlight">{{ formatMoney(t.Price) }}</span>
-              </div>
+              <span class="price-highlight">{{ formatMoney(t.Price) }}</span>
             </td>
             <td>
               <span>{{ t.AvailableSlots }} / {{ t.MaxSlots }}</span>
             </td>
             <td>
-              <select 
-                :value="t.Status" 
+              <select
+                :value="t.Status"
                 @change="handleStatusChange(t, $event.target.value)"
                 class="status-dropdown"
                 :disabled="t.Status === 'DELETED'"
@@ -96,41 +87,41 @@
     </div>
 
     <!-- MODAL TẠO & SỬA TOUR -->
-    <Teleport to="body">
-      <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
-        <div class="modal-card wide-card">
-          <div class="modal-header">
-            <h3>{{ isEditing ? 'Cập nhật Tour & Lộ trình' : 'Tạo Tour Mới' }}</h3>
-            <button class="modal-close" @click="showModal = false">✕</button>
-          </div>
-          <form @submit.prevent="handleSubmit">
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Tiêu đề Tour *</label>
-                <input v-model="formData.title" @input="autoSlug" type="text" required class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Đường dẫn Slug *</label>
-                <input v-model="formData.slug" type="text" required class="form-control" />
-              </div>
+    <Teleport to="body"><div v-if="showModal" class="modal-overlay">
+      <div class="modal-card wide-card">
+        <div class="modal-header">
+          <h3>{{ isEditing ? 'Cập nhật Tour & Lộ trình' : 'Tạo Tour Mới' }}</h3>
+          <button class="modal-close" @click="showModal = false">✕</button>
+        </div>
+        <form @submit.prevent="handleSubmit">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Tiêu đề Tour *</label>
+              <input v-model="formData.title" @input="autoSlug" type="text" required class="form-control" />
             </div>
+            <div class="form-group">
+              <label class="form-label">Đường dẫn Slug *</label>
+              <input v-model="formData.slug" type="text" required class="form-control" />
+            </div>
+          </div>
 
-            <div class="grid-2">
+          <div class="grid-2">
               <div class="form-group">
                 <label class="form-label">Giá gốc ban đầu (VNĐ) *</label>
-                <input 
-                  v-model.number="formData.originalPrice" 
-                  type="number" 
-                  min="0" 
-                  step="1000" 
-                  required 
-                  class="form-control" 
-                  placeholder="VD: 5000000" 
+                <input
+                  v-model.number="formData.originalPrice"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  required
+                  class="form-control"
+                  placeholder="VD: 5000000"
                 />
               </div>
               <div class="form-group">
                 <label class="form-label">Khuyến mãi / Giảm giá (%)</label>
                 <select v-model.number="formData.discountPercent" class="form-select">
+                  <option v-if="formData.discountPercent > 0 && formData.discountPercent % 10 !== 0" :value="formData.discountPercent">{{ formData.discountPercent }}% - Mức giảm hiện tại</option>
                   <option :value="0">0% (Không áp dụng khuyến mãi)</option>
                   <option :value="10">10% - Giảm 10%</option>
                   <option :value="20">20% - Giảm 20%</option>
@@ -166,82 +157,106 @@
             </div>
 
             <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Thời lượng *</label>
-                <input v-model="formData.duration" type="text" required class="form-control" placeholder="3 Ngày 2 Đêm" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Số chỗ tối đa *</label>
-                <input v-model.number="formData.maxSlots" type="number" min="1" required class="form-control" />
-              </div>
+
+            <div class="form-group">
+              <label class="form-label">Thời lượng *</label>
+              <input v-model="formData.duration" type="text" required class="form-control" placeholder="3 Ngày 2 Đêm" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Số chỗ tối đa *</label>
+              <input v-model="formData.maxSlots" type="number" min="1" required class="form-control" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Ngày giờ khởi hành (giờ Việt Nam) *</label>
+              <input v-model="formData.startDate" type="datetime-local" required class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày giờ kết thúc (giờ Việt Nam) *</label>
+              <input v-model="formData.endDate" type="datetime-local" required :min="formData.startDate || undefined" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Địa danh</label>
+              <select v-model="formData.destinationId" class="form-select">
+                <option value="">-- Chọn địa danh liên kết --</option>
+                <option v-for="d in destinations" :key="d.DestinationID" :value="d.DestinationID">
+                  {{ d.Name }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Trình soạn thảo lộ trình từng ngày (Itinerary) -->
+          <div class="itinerary-box">
+            <div class="itinerary-top">
+              <strong>Lộ trình chi tiết từng ngày</strong>
+              <button type="button" class="btn btn-outline btn-sm" @click="addDay">+ Thêm ngày</button>
             </div>
 
-            <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Ngày khởi hành *</label>
-                <input v-model="formData.startDate" type="date" required class="form-control" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Địa danh</label>
-                <select v-model="formData.destinationId" class="form-select">
-                  <option value="">-- Chọn địa danh liên kết --</option>
-                  <option v-for="d in destinations" :key="d.DestinationID" :value="d.DestinationID">
-                    {{ d.Name }}
-                  </option>
-                </select>
-              </div>
-            </div>
+            <label class="form-label" for="itinerary-overview">Tổng quan chuyến đi</label>
+            <textarea id="itinerary-overview" v-model="itineraryOverview" class="form-textarea" rows="3" placeholder="Giới thiệu hành trình, trải nghiệm nổi bật và đối tượng phù hợp..."></textarea>
+            <p class="itinerary-help">Mỗi ngày hiển thị thành một thẻ lịch trình. Thêm hoạt động theo thời gian, bữa ăn và nơi lưu trú để khách dễ theo dõi.</p>
 
-            <!-- Trình soạn thảo lộ trình từng ngày (Itinerary) -->
-            <div class="itinerary-box">
-              <div class="itinerary-top">
-                <strong>Lộ trình chi tiết từng ngày</strong>
-                <button type="button" class="btn btn-outline btn-sm" @click="addDay">+ Thêm ngày</button>
+            <div v-for="(day, idx) in itineraryList" :key="idx" class="itinerary-item">
+              <div class="item-head">
+                <span class="day-num">Ngày {{ idx + 1 }}</span>
+                <button type="button" class="btn-remove" @click="removeDay(idx)" v-if="itineraryList.length > 1">Xóa</button>
               </div>
-
-              <div v-for="(day, idx) in itineraryList" :key="idx" class="itinerary-item">
-                <div class="item-head">
-                  <span class="day-num">Ngày {{ idx + 1 }}</span>
-                  <button type="button" class="btn-remove" @click="removeDay(idx)" v-if="itineraryList.length > 1">Xóa</button>
+              <input v-model="day.title" type="text" placeholder="Tiêu đề ngày (VD: Tham quan danh lam và ăn trưa)" class="form-control" required style="margin-bottom: 6px;" />
+              <label class="form-label">Giới thiệu ngày / mô tả bổ sung</label>
+              <textarea v-model="day.detail" placeholder="Ghi chú chung cho ngày này..." rows="2" class="form-textarea"></textarea>
+              <div v-for="(activity, activityIdx) in day.activities" :key="activityIdx" class="activity-editor">
+                <div class="activity-head"><strong>Hoạt động {{ activityIdx + 1 }}</strong><button type="button" class="btn-remove" @click="day.activities.splice(activityIdx, 1)">Xóa hoạt động</button></div>
+                <div class="activity-fields">
+                  <label>Thời gian<input v-model="activity.time" class="form-control" placeholder="08:00 hoặc Buổi sáng" required /></label>
+                  <label>Tên hoạt động<input v-model="activity.title" class="form-control" placeholder="Tham quan phố cổ Hội An" required /></label>
                 </div>
-                <input v-model="day.title" type="text" placeholder="Tiêu đề ngày (VD: Tham quan danh lam và ăn trưa)" class="form-control" required style="margin-bottom: 6px;" />
-                <textarea v-model="day.detail" placeholder="Mô tả chi tiết hoạt động trong ngày..." rows="2" class="form-textarea"></textarea>
+                <label>Mô tả hoạt động<textarea v-model="activity.description" class="form-textarea" rows="2" placeholder="Điểm tham quan, di chuyển, thời gian nghỉ và trải nghiệm của khách..."></textarea></label>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" @click="day.activities.push({ time: '', title: '', description: '' })">+ Thêm hoạt động</button>
+              <div class="grid-2 day-practical-fields">
+                <label>Bữa ăn<input v-model="day.meals" class="form-control" placeholder="Sáng, trưa; tối tự túc" /></label>
+                <label>Lưu trú<input v-model="day.stay" class="form-control" placeholder="Khách sạn tại Hội An / không nghỉ qua đêm" /></label>
               </div>
             </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline" @click="showModal = false">Hủy</button>
-              <button type="submit" class="btn btn-primary" :disabled="submitLoading">
-                {{ isEditing ? 'Lưu thay đổi' : 'Tạo Tour' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- MODAL XÓA MỀM -->
-    <Teleport to="body">
-      <div v-if="tourToDelete" class="modal-overlay" @click.self="tourToDelete = null">
-        <div class="modal-card">
-          <div class="modal-header">
-            <h3>Xác nhận xóa mềm Tour</h3>
-            <button class="modal-close" @click="tourToDelete = null">✕</button>
+            <label class="form-label" for="itinerary-notes">Lưu ý / chuẩn bị trước chuyến đi</label>
+            <textarea id="itinerary-notes" v-model="itineraryNotes" class="form-textarea" rows="3" placeholder="Mỗi dòng là một lưu ý: giấy tờ, hành lý, trang phục, điều kiện thời tiết..."></textarea>
           </div>
-          <div class="modal-body">
-            <p>
-              Bạn có chắc chắn muốn xóa tour <strong>{{ tourToDelete.Title }}</strong>?
-            </p>
-            <div class="warning-box">
-              Nguyên tắc bảo toàn dữ liệu: Tour sẽ được gắn cờ DELETED, không còn hiển thị cho khách hàng nhưng vẫn lưu giữ nguyên vẹn trong hệ thống để bảo đảm tính chính xác của các đơn đặt chỗ trước đó.
-            </div>
-          </div>
+
           <div class="modal-footer">
-            <button class="btn btn-outline" @click="tourToDelete = null">Hủy</button>
-            <button class="btn btn-danger" @click="confirmDelete">Xác nhận xóa mềm</button>
+            <button type="button" class="btn btn-outline" @click="showModal = false">Hủy</button>
+            <button type="submit" class="btn btn-primary" :disabled="submitLoading">
+              {{ isEditing ? 'Lưu thay đổi' : 'Tạo Tour' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    </Teleport>
+    <!-- MODAL XÓA MỀM -->
+    <Teleport to="body"><div v-if="tourToDelete" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Xác nhận xóa mềm Tour</h3>
+          <button class="modal-close" @click="tourToDelete = null">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Bạn có chắc chắn muốn xóa tour <strong>{{ tourToDelete.Title }}</strong>?
+          </p>
+          <div class="warning-box">
+            Nguyên tắc bảo toàn dữ liệu: Tour sẽ được gắn cờ DELETED, không còn hiển thị cho khách hàng nhưng vẫn lưu giữ nguyên vẹn trong hệ thống để bảo đảm tính chính xác của các đơn đặt chỗ trước đó.
           </div>
         </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="tourToDelete = null">Hủy</button>
+          <button class="btn btn-danger" @click="confirmDelete">Xác nhận xóa mềm</button>
+        </div>
       </div>
+    </div>
     </Teleport>
   </div>
 </template>
@@ -266,6 +281,7 @@ const formData = ref({
   originalPrice: '',
   discountPercent: 0,
   startDate: '',
+  endDate: '',
   duration: '2 Ngày 1 Đêm',
   maxSlots: 30,
   destinationId: ''
@@ -286,6 +302,9 @@ const calculatedSavings = computed(() => {
 const itineraryList = ref([
   { day: 1, title: 'Đón khách và làm thủ tục', detail: 'Tập trung tại điểm hẹn và bắt đầu lịch trình.' }
 ]);
+const itineraryOverview = ref('');
+const itineraryNotes = ref('');
+const makeDay = () => ({ title: '', detail: '', meals: '', stay: '', activities: [{ time: '', title: '', description: '' }] });
 
 const fetchTours = async () => {
   loading.value = true;
@@ -329,42 +348,70 @@ const openCreateModal = () => {
     slug: '',
     originalPrice: '',
     discountPercent: 0,
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: '',
+    endDate: '',
     duration: '2 Ngày 1 Đêm',
     maxSlots: 25,
     destinationId: destinations.value[0]?.DestinationID || ''
   };
-  itineraryList.value = [
-    { day: 1, title: 'Ngày 1: Đón khách và tham quan', detail: 'Bắt đầu lịch trình chuyến đi.' }
-  ];
+  itineraryList.value = [makeDay()];
+  itineraryOverview.value = '';
+  itineraryNotes.value = '';
   showModal.value = true;
 };
 
+const toLocalInput = value => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date);
+  const get = type => parts.find(part => part.type === type).value;
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+};
 const openEditModal = (t) => {
   isEditing.value = true;
   currentId.value = t.TourID;
-  const discount = Number(t.DiscountPercent) || 0;
-  const basePrice = (discount > 0 && t.OriginalPrice) ? Number(t.OriginalPrice) : (t.OriginalPrice ? Number(t.OriginalPrice) : Number(t.Price));
+  const salePrice = Number(t.Price);
+  const originalPrice = Number(t.OriginalPrice);
+  const hasDiscount = originalPrice > salePrice && salePrice > 0;
+  const discount = hasDiscount
+    ? Math.round((1 - salePrice / originalPrice) * 10000) / 100
+    : 0;
+  const basePrice = hasDiscount ? originalPrice : salePrice;
   formData.value = {
     title: t.Title,
     slug: t.Slug,
     originalPrice: basePrice,
     discountPercent: discount,
-    startDate: t.StartDate ? t.StartDate.split('T')[0] : '',
+    startDate: toLocalInput(t.StartDate),
+    endDate: toLocalInput(t.EndDate),
     duration: t.Duration,
     maxSlots: t.MaxSlots,
     destinationId: t.DestinationID || ''
   };
   try {
-    itineraryList.value = typeof t.Itinerary === 'string' ? JSON.parse(t.Itinerary) : (t.Itinerary || []);
+    let source = t.Itinerary;
+    if (typeof source === 'string') {
+      try { source = JSON.parse(source); } catch { source = [{ title: 'Lộ trình', detail: source }]; }
+    }
+    const days = Array.isArray(source) ? source : source?.days || [];
+    itineraryList.value = days.map((day, index) => {
+      const existing = typeof day === 'string' ? { title: `Ngày ${index + 1}`, detail: day } : day;
+      return { ...existing, detail: existing.detail || '', meals: existing.meals || '', stay: existing.stay || '', activities: Array.isArray(existing.activities) ? existing.activities.map(activity => ({ ...activity })) : [] };
+    });
+    if (!itineraryList.value.length) itineraryList.value = [makeDay()];
+    itineraryOverview.value = itineraryList.value[0].overview || source?.overview || '';
+    itineraryNotes.value = (itineraryList.value[0].notes || source?.notes || []).join('\n');
   } catch (e) {
-    itineraryList.value = [{ day: 1, title: 'Lộ trình', detail: '' }];
+    itineraryList.value = [makeDay()];
+    itineraryOverview.value = '';
+    itineraryNotes.value = '';
   }
   showModal.value = true;
 };
 
 const addDay = () => {
-  itineraryList.value.push({ day: itineraryList.value.length + 1, title: '', detail: '' });
+  itineraryList.value.push(makeDay());
 };
 
 const removeDay = (idx) => {
@@ -385,17 +432,23 @@ const showToast = (msg, type = 'success') => {
 };
 
 const handleSubmit = async () => {
+  if (!formData.value.startDate || !formData.value.endDate || formData.value.endDate <= formData.value.startDate) {
+    showToast('Ngày giờ kết thúc phải sau ngày giờ khởi hành.', 'error');
+    return;
+  }
+  if (!itineraryList.value.length || itineraryList.value.some(day => !day.title.trim()
+    || (!day.activities.length && !day.detail.trim())
+    || day.activities.some(activity => !activity.time.trim() || !activity.title.trim()))) {
+    showToast('Mỗi ngày cần tiêu đề và hoạt động hoặc mô tả. Hoạt động cần thời gian và tên.', 'error');
+    return;
+  }
   submitLoading.value = true;
   try {
-    const finalPrice = calculatedFinalPrice.value;
-    const isDiscount = Number(formData.value.discountPercent) > 0;
-    const payload = {
-      ...formData.value,
-      price: finalPrice,
-      originalPrice: isDiscount ? Number(formData.value.originalPrice) : null,
-      discountPercent: Number(formData.value.discountPercent) || 0,
-      itinerary: itineraryList.value
-    };
+    const itinerary = itineraryList.value.map((day, index) => {
+      const { overview, notes, ...content } = day;
+      return { ...content, day: index + 1, ...(index === 0 ? { overview: itineraryOverview.value.trim(), notes: itineraryNotes.value.split('\n').map(note => note.trim()).filter(Boolean) } : {}) };
+    });
+    const payload = { ...formData.value, price: calculatedFinalPrice.value, originalPrice: Number(formData.value.discountPercent) > 0 ? Number(formData.value.originalPrice) : null, discountPercent: Number(formData.value.discountPercent) || 0, itinerary };
     if (isEditing.value) {
       await adminApi.updateTour(currentId.value, payload);
       showToast('Cập nhật Tour và lộ trình thành công!');
@@ -592,6 +645,13 @@ onMounted(() => {
   border-radius: 10px;
   margin: 16px 0;
 }
+.itinerary-help { color: #64748b; font-size: .85rem; line-height: 1.6; margin: 10px 0 16px; }
+.activity-editor { background: #f3faf7; border: 1px solid #dbece3; border-radius: 8px; padding: 12px; margin: 12px 0; }
+.activity-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; font-size: .85rem; color: #295c4c; }
+.activity-fields { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 10px; }
+.activity-editor label, .day-practical-fields label { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; }
+.day-practical-fields { margin-top: 14px; }
+@media (max-width: 600px) { .activity-fields, .day-practical-fields { grid-template-columns: 1fr; } }
 
 .itinerary-top {
   display: flex;
