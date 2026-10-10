@@ -67,6 +67,7 @@
             <span>Đơn giá (1 khách):</span>
             <span>{{ formatPrice(tour.Price) }}</span>
           </div>
+          <p v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="discount-note">Đã giảm từ <del>{{ formatPrice(tour.OriginalPrice) }}</del> · Tiết kiệm {{ formatPrice(tour.OriginalPrice - tour.Price) }} / khách</p>
           <div class="price-total">
             <span>Tổng tiền:</span>
             <span class="total-value">{{ formatPrice(tour.Price * form.passengerCount) }}</span>
@@ -139,6 +140,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.discount-note { color: #007d68; font-size: .9rem; line-height: 1.6; }
 .booking-page { max-width: 1100px; margin: 0 auto; padding: 100px 20px 60px; }
 .header-section { margin-bottom: 40px; }
 .header-section h1 { font-size: 2.5rem; color: var(--secondary-color); margin-bottom: 10px; }

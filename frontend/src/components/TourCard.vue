@@ -1,6 +1,7 @@
 <template>
   <div class="tour-card" @click="$router.push(`/tour/${tour.TourID}`)">
     <div class="card-image-wrapper">
+      <span v-if="discountPercent > 0" class="discount-badge">Giảm {{ discountPercent }}%</span>
       <img 
         :src="displayImage" 
         :alt="tour.Title" 
@@ -10,15 +11,12 @@
       <div class="card-overlay">
         <div class="card-info">
           <h3 class="title">{{ tour.Title }}</h3>
+          <p class="departure-info">{{ tour.Duration }}<template v-if="tour.StartDate"> · {{ departureDate }}</template></p>
           <div class="meta">
             <span class="rating">{{ Number(tour.ReviewCount) > 0 ? '⭐ ' + Number(tour.AverageRating).toFixed(1) + ' (' + tour.ReviewCount + ' đánh giá)' : 'Chưa có đánh giá' }}</span>
-            <div v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="price-stack"><span class="old-price">{{ formatPrice(tour.OriginalPrice) }}</span><span class="price">{{ formatPrice(tour.Price) }}</span></div>
-            <span v-else class="price">{{ formatPrice(tour.Price) }}</span>
+            <span class="price-group"><del v-if="discountPercent > 0" class="original-price">{{ formatPrice(tour.OriginalPrice) }}</del><span class="price">{{ formatPrice(tour.Price) }}</span></span>
           </div>
         </div>
-      </div>
-      <div v-if="tour.DiscountPercent > 0" class="card-discount-badge">
-        -{{ tour.DiscountPercent }}%
       </div>
       <button class="btn-favorite" @click.stop="toggleFavorite">
         <svg xmlns="http://www.w3.org/2000/svg" :fill="isFavorite ? '#ef4444' : 'none'" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-heart">
@@ -49,6 +47,12 @@ const props = defineProps({
     default: false
   }
 });
+const departureDate = computed(() => {
+  const date = new Date(props.tour.StartDate);
+  return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date) : '';
+});
+const discountPercent = computed(() => Number(props.tour.OriginalPrice) > Number(props.tour.Price)
+  ? Math.round((1 - Number(props.tour.Price) / Number(props.tour.OriginalPrice)) * 100) : 0);
 
 const isFavorite = ref(props.tour.isFavorite !== undefined ? !!props.tour.isFavorite : props.isInitialFavorite);
 
@@ -122,6 +126,10 @@ const formatPrice = (price) => {
 </script>
 
 <style scoped>
+.discount-badge { position: absolute; top: 16px; left: 16px; z-index: 2; padding: 7px 12px; background: #007d68; border-radius: 20px; color: white; font-size: .85rem; font-weight: 800; }
+.price-group { display: flex; flex-direction: column; align-items: end; flex-shrink: 0; gap: 4px; }
+.original-price { font-size: .8rem; color: #e2e8f0; font-weight: 400; }
+.departure-info { margin: 0 0 8px; color: #e3f5ef; font-size: .82rem; line-height: 1.5; }
 .tour-card {
   width: 100%;
   aspect-ratio: 1; /* Cắt thành hình vuông hoàn hảo */

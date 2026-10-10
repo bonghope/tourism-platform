@@ -40,25 +40,23 @@
             <span class="badge highlight">{{ Number(tour.ReviewCount) > 0 ? '⭐ ' + Number(tour.AverageRating).toFixed(1) + ' (' + tour.ReviewCount + ' đánh giá)' : 'Chưa có đánh giá' }}</span>
           </div>
           <h1 class="title">{{ tour.Title }}</h1>
+          <PhotoCredit :image="coverImage" />
+          <p v-if="itineraryOverview" class="tour-overview">{{ itineraryOverview }}</p>
           
           <div class="booking-card">
             <div class="price-section">
-              <span class="price-label">Giá trọn gói:</span>
-              <div v-if="tour.DiscountPercent > 0 || (tour.OriginalPrice && Number(tour.OriginalPrice) > Number(tour.Price))" class="detail-price-stack">
-                <div class="detail-old-row">
-                  <span class="detail-old-price">{{ formatPrice(tour.OriginalPrice || tour.Price) }}</span>
-                  <span class="detail-discount-badge">-{{ tour.DiscountPercent || Math.round((1 - tour.Price / tour.OriginalPrice) * 100) }}%</span>
-                </div>
-                <span class="price-value">{{ formatPrice(tour.Price) }}</span>
-              </div>
-              <span v-else class="price-value">{{ formatPrice(tour.Price) }}</span>
+              <span class="price-label">Giá / khách:</span>
+              <del v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="original-price">{{ formatPrice(tour.OriginalPrice) }}</del>
+              <span class="price-value">{{ formatPrice(tour.Price) }}</span>
+              <span v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="discount-note">Tiết kiệm {{ formatPrice(tour.OriginalPrice - tour.Price) }} / khách</span>
             </div>
             <div class="slots-info">
               <span>Khởi hành: <strong>{{ formatDate(tour.StartDate) }}</strong></span>
+              <span v-if="tour.EndDate">Kết thúc: <strong>{{ formatDate(tour.EndDate) }}</strong></span>
               <span>Số chỗ còn nhận: <strong>{{ tour.AvailableSlots }}</strong> / {{ tour.MaxSlots }}</span>
             </div>
-            <button class="btn-book-large" @click="$router.push('/booking/' + tour.TourID)">
-              Tiến hành Đặt Tour
+            <button class="btn-book-large" :disabled="!canBook" @click="$router.push('/booking/' + tour.TourID)">
+              {{ canBook ? 'Đặt chuyến đi này' : 'Chuyến đi đã đóng đăng ký' }}
             </button>
           </div>
         </div>
@@ -66,10 +64,32 @@
         <!-- Lịch trình -->
         <div class="itinerary-section">
           <h2>Lịch trình chi tiết</h2>
-          <div v-if="tour.Itinerary" class="itinerary-content">
-            <pre>{{ JSON.stringify(tour.Itinerary, null, 2) }}</pre>
+          <p class="itinerary-intro">Lịch trình theo từng ngày, có thời gian nghỉ và di chuyển. Thứ tự tham quan có thể điều chỉnh theo thời tiết và điều kiện thực tế.</p>
+          <div v-if="itineraryDays.length" class="itinerary-content">
+            <article v-for="(day, index) in itineraryDays" :key="index" class="day-card">
+              <div class="day-number">{{ String(index + 1).padStart(2, '0') }}</div>
+              <div class="day-body">
+                <span class="day-label">Ngày {{ day.day || index + 1 }}</span>
+                <h3>{{ day.title }}</h3>
+                <p v-if="day.detail" class="day-detail">{{ day.detail }}</p>
+                <ul v-if="day.activities?.length" class="day-activities">
+                  <li v-for="(activity, activityIndex) in day.activities" :key="activityIndex">
+                    <span class="activity-time">{{ activity.time }}</span>
+                    <div><strong>{{ activity.title }}</strong><p>{{ activity.description }}</p></div>
+                  </li>
+                </ul>
+                <div v-if="day.meals || day.stay" class="day-practical">
+                  <span v-if="day.meals">Bữa ăn: {{ day.meals }}</span>
+                  <span v-if="day.stay">Lưu trú: {{ day.stay }}</span>
+                </div>
+              </div>
+            </article>
           </div>
-          <div v-else class="empty-itinerary">
+          <div v-if="tripNotes.length" class="trip-notes">
+            <h3>Chuẩn bị trước chuyến đi</h3>
+            <ul><li v-for="note in tripNotes" :key="note">{{ note }}</li></ul>
+          </div>
+          <div v-if="!itineraryDays.length" class="empty-itinerary">
             <p>Đang cập nhật lịch trình cho chuyến đi này...</p>
           </div>
         </div>
@@ -81,7 +101,8 @@
 
 <script setup>
 import TourReviews from './TourReviews.vue';
-import { ref, computed, onMounted } from 'vue';
+import PhotoCredit from './PhotoCredit.vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 const defaultTourCover = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=1200&q=80';
@@ -91,6 +112,19 @@ const tour = ref(null);
 const loading = ref(true);
 const error = ref(null);
 const activeImgIndex = ref(0);
+const itineraryDays = computed(() => {
+  let value = tour.value?.Itinerary;
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value); } catch { value = [value]; }
+  }
+  const days = Array.isArray(value) ? value : value?.days || [];
+  return days.flatMap((day, index) => typeof day === 'string'
+    ? day.split(/\n+/).filter(Boolean).map(line => ({ title: line.replace(/^Ngày\s*\d+\s*:\s*/i, '') }))
+    : [{ ...day, title: day.title || `Khám phá ngày ${index + 1}` }]);
+});
+const itineraryOverview = computed(() => itineraryDays.value[0]?.overview || '');
+const tripNotes = computed(() => itineraryDays.value[0]?.notes || []);
+const canBook = computed(() => Number(tour.value?.AvailableSlots) > 0 && new Date(tour.value?.StartDate).getTime() > Date.now());
 
 const coverImage = computed(() => {
   if (tour.value?.images && tour.value.images.length > 0) {
@@ -110,9 +144,12 @@ const handleThumbError = (e) => {
 
 const fetchTourDetail = async () => {
   loading.value = true;
+  error.value = null;
+  activeImgIndex.value = 0;
   try {
     // Gọi API Module 2: Lấy chi tiết 1 Tour bằng ID
-    const res = await fetch(`http://localhost:3000/api/tours/${route.params.id}`);
+    const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+    const res = await fetch(`${base}/tours/${encodeURIComponent(route.params.id)}`);
     const json = await res.json();
     if (json.success) {
       tour.value = json.data;
@@ -135,16 +172,16 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('vi-VN');
 };
 
-onMounted(() => {
-  fetchTourDetail();
-});
+watch(() => route.params.id, fetchTourDetail, { immediate: true });
 </script>
 
 <style scoped>
+.original-price { display: block; color: #64748b; font-size: 1rem; }
+.discount-note { display: block; color: #007d68; font-size: .9rem; font-weight: 600; }
 .tour-detail-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 100px 20px 60px;
 }
 .loading-state, .error-state {
   text-align: center;
@@ -237,6 +274,7 @@ onMounted(() => {
   margin-bottom: 30px;
   line-height: 1.3;
 }
+.tour-overview { color: #52636b; font-size: 1.05rem; line-height: 1.8; margin: 8px 0 28px; }
 .booking-card {
   background: var(--bg-color);
   padding: 24px;
@@ -309,14 +347,35 @@ onMounted(() => {
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 12px;
 }
-.itinerary-content pre {
-  background: #f8fafc;
-  padding: 20px;
-  border-radius: var(--radius-lg);
-  font-family: inherit;
-  white-space: pre-wrap;
-  color: var(--text-muted);
-  line-height: 1.8;
+.itinerary-intro { color: #64748b; line-height: 1.7; margin-bottom: 24px; }
+.itinerary-content { display: grid; gap: 20px; }
+.day-card { display: flex; gap: 20px; padding: 24px; border: 1px solid #dcebe7; border-radius: 20px; background: #fcfefd; }
+.day-number { flex-shrink: 0; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: #dff9f0; color: #007d68; font-size: 1.1rem; font-weight: 800; }
+.day-body { min-width: 0; flex: 1; }
+.day-label { color: #007d68; font-size: .8rem; font-weight: 700; }
+.day-body h3 { margin: 6px 0 12px; color: #243b40; font-size: 1.22rem; line-height: 1.4; }
+.day-detail { white-space: pre-line; line-height: 1.8; color: #52636b; }
+.day-activities { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 18px; }
+.day-activities li { display: grid; grid-template-columns: 70px 1fr; gap: 14px; }
+.activity-time { font-size: .85rem; font-weight: 700; color: #007d68; }
+.day-activities strong { color: #243b40; font-size: .98rem; }
+.day-activities p { margin: 5px 0 0; color: #64748b; line-height: 1.75; }
+.day-practical { display: flex; flex-wrap: wrap; gap: 10px 22px; border-top: 1px solid #e2eee9; padding-top: 14px; font-size: .88rem; color: #52636b; }
+.trip-notes { margin-top: 24px; padding: 22px 26px; border-radius: 16px; background: #f1f8f5; color: #435951; }
+.trip-notes h3 { margin-top: 0; color: #243b40; }
+.trip-notes li { line-height: 1.8; margin-bottom: 6px; }
+.btn-book-large:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+@media (max-width: 768px) {
+  .tour-detail-page { padding: 90px 12px 32px; }
+  .gallery { height: 300px; margin-bottom: -30px; }
+  .gallery-thumbs-overlay { bottom: 45px; }
+  .content-wrapper { margin: 0 8px; padding: 24px 16px; }
+  .title { font-size: 1.8rem; }
+  .badges { flex-wrap: wrap; }
+  .booking-card { flex-direction: column; align-items: stretch; gap: 20px; margin-bottom: 28px; }
+  .day-card { padding: 18px 14px; gap: 12px; }
+  .day-number { width: 32px; height: 36px; font-size: .9rem; }
+  .day-activities li { grid-template-columns: 1fr; gap: 4px; }
 }
 .empty-itinerary {
   padding: 40px;
