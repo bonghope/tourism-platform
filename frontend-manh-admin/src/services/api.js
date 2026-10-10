@@ -18,7 +18,9 @@ const mockDb = {
       TourID: 't-1',
       Title: 'Du thuyền 5 sao ngắm hoàng hôn Vịnh Hạ Long',
       Slug: 'du-thuyen-5-sao-vinh-ha-long',
-      Price: 2850000,
+      Price: 2280000,
+      OriginalPrice: 2850000,
+      DiscountPercent: 20,
       StartDate: '2026-11-15',
       Duration: '2 Ngày 1 Đêm',
       MaxSlots: 30,
@@ -35,7 +37,9 @@ const mockDb = {
       TourID: 't-2',
       Title: 'Khám phá văn hóa & ẩm thực Phố Cổ Hội An',
       Slug: 'kham-pha-pho-co-hoi-an',
-      Price: 1950000,
+      Price: 1755000,
+      OriginalPrice: 1950000,
+      DiscountPercent: 10,
       StartDate: '2026-11-20',
       Duration: '3 Ngày 2 Đêm',
       MaxSlots: 25,
@@ -53,6 +57,8 @@ const mockDb = {
       Title: 'Lặn ngắm san hô & Hoàng hôn Sunset Sanato Phú Quốc',
       Slug: 'lan-ngam-san-ho-phu-quoc',
       Price: 3490000,
+      OriginalPrice: 3490000,
+      DiscountPercent: 0,
       StartDate: '2026-12-05',
       Duration: '4 Ngày 3 Đêm',
       MaxSlots: 20,
@@ -460,11 +466,16 @@ class AdminApiService {
   // 3. Quản lý Tour
   async getTours() {
     try {
-      const res = await fetch(`${API_BASE_URL}/tours?limit=100`);
+      const res = await this.authFetch(`${API_BASE_URL}/admin/tours`);
       const data = await res.json();
       if (data.success) return data;
       throw new Error();
     } catch (e) {
+      try {
+        const res2 = await fetch(`${API_BASE_URL}/tours?limit=100`);
+        const data2 = await res2.json();
+        if (data2.success) return data2;
+      } catch (err) {}
       return { success: true, data: mockDb.tours };
     }
   }
@@ -484,6 +495,8 @@ class AdminApiService {
         Title: data.title,
         Slug: data.slug || data.title.toLowerCase().replace(/\s+/g, '-'),
         Price: Number(data.price),
+        OriginalPrice: data.originalPrice ? Number(data.originalPrice) : null,
+        DiscountPercent: Number(data.discountPercent) || 0,
         StartDate: data.startDate,
         Duration: data.duration,
         MaxSlots: Number(data.maxSlots),
@@ -509,7 +522,20 @@ class AdminApiService {
       throw new Error(resData.message);
     } catch (e) {
       const t = mockDb.tours.find(x => x.TourID === tourId);
-      if (t) Object.assign(t, data);
+      if (t) {
+        Object.assign(t, {
+          ...data,
+          Price: data.price !== undefined ? Number(data.price) : t.Price,
+          OriginalPrice: data.originalPrice !== undefined ? (data.originalPrice ? Number(data.originalPrice) : null) : t.OriginalPrice,
+          DiscountPercent: data.discountPercent !== undefined ? Number(data.discountPercent) : t.DiscountPercent,
+          Title: data.title || t.Title,
+          Slug: data.slug || t.Slug,
+          Duration: data.duration || t.Duration,
+          MaxSlots: data.maxSlots || t.MaxSlots,
+          StartDate: data.startDate || t.StartDate,
+          DestinationID: data.destinationId || t.DestinationID
+        });
+      }
       return { success: true, message: 'Cập nhật Tour thành công.' };
     }
   }
