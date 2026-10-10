@@ -419,7 +419,8 @@ onUnmounted(() => {
    ========================================= */
 .hero-slider {
   width: 100%;
-  height: 90vh; /* Thu nhỏ một chút so với 100vh để hở phần dưới */
+  height: 100vh;
+  height: 100dvh; /* Phủ toàn bộ vùng màn hình hiện tại, kể cả trên điện thoại */
   position: relative;
   color: white;
   margin-bottom: 40px;
