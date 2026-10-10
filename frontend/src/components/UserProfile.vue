@@ -120,11 +120,6 @@
                   </div>
                 </div>
 
-                <div class="form-group">
-                  <label>Đường dẫn ảnh đại diện (Avatar URL)</label>
-                  <input v-model="editForm.avatarUrl" type="text" placeholder="https://..." class="form-control" />
-                </div>
-
                 <button type="submit" class="btn-primary" :disabled="loadingUpdate">
                   <span v-if="loadingUpdate" class="spinner-small"></span>
                   <span v-else>Lưu thông tin</span>
@@ -325,10 +320,45 @@
               />
               <p class="field-hint">Số điện thoại mới sẽ được dùng để đăng nhập và khôi phục tài khoản qua OTP.</p>
             </div>
+
+            <!-- Ô NHẬP MÃ OTP XÁC THỰC SĐT -->
+            <div class="form-group">
+              <div class="label-row">
+                <label>Mã xác thực OTP <span class="required-star">*</span></label>
+                <span v-if="phoneOtpSent" class="otp-badge-sent">Đã gửi mã</span>
+              </div>
+              <div class="otp-input-group-row">
+                <input 
+                  v-model="phoneOtpInput" 
+                  type="text" 
+                  maxlength="6" 
+                  placeholder="Nhập mã" 
+                  class="form-control otp-input-box" 
+                />
+                <button 
+                  type="button" 
+                  class="btn-get-otp-action" 
+                  @click="handleRequestPhoneOtp" 
+                  :disabled="loadingPhoneOtp || phoneCountdown > 0 || !newPhoneInput"
+                  :title="!newPhoneInput ? 'Vui lòng nhập số điện thoại để lấy mã' : 'Lấy mã OTP'"
+                >
+                  <span v-if="loadingPhoneOtp" class="spinner-small"></span>
+                  <span v-else-if="phoneCountdown > 0">{{ phoneCountdown }}s</span>
+                  <span v-else>{{ phoneOtpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
+                </button>
+              </div>
+              <p v-if="phoneOtpSent" class="otp-help-text otp-success-text">
+                Mã OTP đã gửi đến SĐT <strong>{{ newPhoneInput }}</strong>: <strong>{{ serverPhoneOtp }}</strong>
+              </p>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn-outline" @click="showPhoneModal = false">Hủy</button>
-            <button type="submit" class="btn-primary" :disabled="loadingChangePhone || !newPhoneInput">
+            <button 
+              type="submit" 
+              class="btn-primary" 
+              :disabled="loadingChangePhone || !phoneOtpSent || !phoneOtpInput || phoneOtpInput.trim().length < 6"
+            >
               <span v-if="loadingChangePhone" class="spinner-small"></span>
               <span v-else>Xác nhận đổi số</span>
             </button>
@@ -464,14 +494,25 @@ const loadingPassword = ref(false);
 // Thay đổi số điện thoại
 const showPhoneModal = ref(false);
 const newPhoneInput = ref('');
+const phoneOtpInput = ref('');
+const serverPhoneOtp = ref('');
+const loadingPhoneOtp = ref(false);
 const loadingChangePhone = ref(false);
+const phoneOtpSent = ref(false);
+const phoneCountdown = ref(0);
+let phoneOtpTimer = null;
 
 const openPhoneModal = () => {
   newPhoneInput.value = '';
+  phoneOtpInput.value = '';
+  serverPhoneOtp.value = '';
+  phoneOtpSent.value = false;
+  phoneCountdown.value = 0;
+  if (phoneOtpTimer) clearInterval(phoneOtpTimer);
   showPhoneModal.value = true;
 };
 
-const handleChangePhone = async () => {
+const handleRequestPhoneOtp = async () => {
   const cleanPhone = (newPhoneInput.value || '').trim().replace(/[\s.-]/g, '');
   if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 11 || !/^\d+$/.test(cleanPhone)) {
     toastStore.warning('Vui lòng nhập số điện thoại hợp lệ (9 đến 11 chữ số).');
@@ -481,17 +522,58 @@ const handleChangePhone = async () => {
     toastStore.warning('Số điện thoại mới trùng với số điện thoại hiện tại.');
     return;
   }
+  loadingPhoneOtp.value = true;
+  try {
+    const res = await api.requestPhoneOtp(cleanPhone);
+    if (res.success) {
+      phoneOtpSent.value = true;
+      if (res.otp) {
+        serverPhoneOtp.value = res.otp;
+        phoneOtpInput.value = res.otp;
+      }
+      toastStore.success(res.message);
+      phoneCountdown.value = 60;
+      if (phoneOtpTimer) clearInterval(phoneOtpTimer);
+      phoneOtpTimer = setInterval(() => {
+        if (phoneCountdown.value > 0) phoneCountdown.value--;
+        else clearInterval(phoneOtpTimer);
+      }, 1000);
+    } else {
+      toastStore.error(res.message);
+    }
+  } catch (e) {
+    toastStore.error('Lỗi khi gửi mã xác thực số điện thoại.');
+  } finally {
+    loadingPhoneOtp.value = false;
+  }
+};
+
+const handleChangePhone = async () => {
+  const cleanPhone = (newPhoneInput.value || '').trim().replace(/[\s.-]/g, '');
+  if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 11 || !/^\d+$/.test(cleanPhone)) {
+    toastStore.warning('Vui lòng nhập số điện thoại hợp lệ (9 đến 11 chữ số).');
+    return;
+  }
+  if (!phoneOtpInput.value || phoneOtpInput.value.trim().length < 6) {
+    toastStore.warning('Vui lòng nhập đủ 6 chữ số mã OTP xác thực.');
+    return;
+  }
   loadingChangePhone.value = true;
   try {
-    const res = await api.updateProfile({ phone: cleanPhone });
+    const res = await api.verifyPhoneOtp(cleanPhone, phoneOtpInput.value.trim());
     if (res.success) {
-      profile.value.Phone = cleanPhone;
-      editForm.value.phone = cleanPhone;
+      const updatedPhone = res.phone || cleanPhone;
+      profile.value.Phone = updatedPhone;
+      editForm.value.phone = updatedPhone;
       if (authStore.user) {
-        authStore.user.phone = cleanPhone;
+        authStore.user.phone = updatedPhone;
       }
       toastStore.success('Thay đổi số điện thoại thành công!');
       showPhoneModal.value = false;
+      phoneOtpSent.value = false;
+      serverPhoneOtp.value = '';
+      phoneOtpInput.value = '';
+      if (phoneOtpTimer) clearInterval(phoneOtpTimer);
     } else {
       toastStore.error(res.message || 'Lỗi khi thay đổi số điện thoại.');
     }
@@ -841,6 +923,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (emailOtpTimer) clearInterval(emailOtpTimer);
+  if (phoneOtpTimer) clearInterval(phoneOtpTimer);
 });
 </script>
 

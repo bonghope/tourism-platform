@@ -255,3 +255,88 @@ test('verifyToken allows active user and populates req.user with DB status', asy
     assert.equal(req.user.status, 'ACTIVE');
     assert.equal(req.user.fullName, 'Nguyen Van A');
 });
+
+test('phone OTP flow requires valid phone and verifies OTP before updating Users', async () => {
+    let updatedPhone = null;
+    const pool = {
+        query: async (sql, params) => {
+            if (sql.includes('SELECT Phone FROM Users WHERE UserID = ?')) {
+                return [[{ Phone: '0901111111' }]];
+            }
+            if (sql.includes('SELECT UserID FROM Users WHERE Phone = ? AND UserID != ?')) {
+                // If phone is '0988888888', mock taken by another user
+                if (params[0] === '0988888888') {
+                    return [[{ UserID: 'OTHER_USER' }]];
+                }
+                return [[]];
+            }
+            if (sql.includes('UPDATE Users SET Phone = ? WHERE UserID = ?')) {
+                updatedPhone = params[0];
+                return [{ affectedRows: 1 }];
+            }
+            return [[]];
+        }
+    };
+
+    const exports = {};
+    const module = { exports };
+    const sandbox = {
+        exports,
+        module,
+        require: name => (name.includes('database') ? pool : require(name)),
+        process: { env: { ...process.env, NODE_ENV: 'test' } },
+        console,
+        Date,
+        Map,
+        Math
+    };
+
+    const filePath = path.join(__dirname, '../controllers/user.controller.js');
+    vm.runInNewContext(fs.readFileSync(filePath, 'utf8'), sandbox);
+    const { requestPhoneOtp, verifyPhoneOtp, updateProfile } = sandbox.module.exports;
+
+    // 1. Same phone is rejected
+    const reqSame = { user: { userId: 'USER_1' }, body: { phone: '0901111111' } };
+    const rSame = res();
+    await requestPhoneOtp(reqSame, rSame);
+    assert.equal(rSame.statusCode, 400);
+    assert.match(rSame.body.message, /trùng với số điện thoại hiện tại/);
+
+    // 2. Phone taken by another user is rejected
+    const reqTaken = { user: { userId: 'USER_1' }, body: { phone: '0988888888' } };
+    const rTaken = res();
+    await requestPhoneOtp(reqTaken, rTaken);
+    assert.equal(rTaken.statusCode, 400);
+    assert.match(rTaken.body.message, /đã được sử dụng/);
+
+    // 3. Valid new phone receives OTP
+    const reqValid = { user: { userId: 'USER_1' }, body: { phone: '0912345678' } };
+    const rValid = res();
+    await requestPhoneOtp(reqValid, rValid);
+    assert.equal(rValid.statusCode, 200);
+    assert.equal(rValid.body.success, true);
+    assert.ok(rValid.body.otp);
+    const generatedOtp = rValid.body.otp;
+
+    // 4. Verify with wrong OTP fails
+    const reqWrongOtp = { user: { userId: 'USER_1' }, body: { phone: '0912345678', otp: '000000' } };
+    const rWrongOtp = res();
+    await verifyPhoneOtp(reqWrongOtp, rWrongOtp);
+    assert.equal(rWrongOtp.statusCode, 400);
+    assert.match(rWrongOtp.body.message, /không chính xác/);
+
+    // 5. Verify with correct OTP succeeds and updates phone
+    const reqCorrectOtp = { user: { userId: 'USER_1' }, body: { phone: '0912345678', otp: generatedOtp } };
+    const rCorrectOtp = res();
+    await verifyPhoneOtp(reqCorrectOtp, rCorrectOtp);
+    assert.equal(rCorrectOtp.statusCode, 200);
+    assert.equal(rCorrectOtp.body.success, true);
+    assert.equal(updatedPhone, '0912345678');
+
+    // 6. Direct updateProfile with different phone is rejected because OTP is required
+    const reqUpdate = { user: { userId: 'USER_1' }, body: { phone: '0999999999', fullName: 'Test' } };
+    const rUpdate = res();
+    await updateProfile(reqUpdate, rUpdate);
+    assert.equal(rUpdate.statusCode, 400);
+    assert.match(rUpdate.body.message, /yêu cầu xác thực bằng mã OTP/);
+});
