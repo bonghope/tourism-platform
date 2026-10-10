@@ -91,22 +91,11 @@
               <strong>Tài khoản bị tạm khóa 15 phút!</strong>
             </div>
             <p class="lockout-desc">{{ errorMessage }}</p>
-            <button type="button" class="btn-lockout-recover" @click="openForgotFromLock">
-              Khôi phục mật khẩu ngay bằng OTP
-            </button>
           </div>
 
           <!-- CẢNH BÁO NHẬP SAI (CÒN LẦN THỬ TRƯỚC KHI BỊ KHÓA) DƯỚI NÚT ĐĂNG NHẬP -->
           <div v-else-if="errorMessage" class="login-warning-box">
             <p class="login-warning-text">{{ errorMessage }}</p>
-            <button 
-              v-if="errorMessage.includes('lần thử') || errorMessage.includes('không chính xác')" 
-              type="button" 
-              class="btn-lockout-recover" 
-              @click="openForgotFromLock"
-            >
-              Khôi phục mật khẩu ngay bằng OTP
-            </button>
           </div>
 
           <div class="divider">
@@ -1112,14 +1101,14 @@ onUnmounted(() => {
   font-size: 0.84rem;
   color: #4b5563;
   line-height: 1.45;
-  margin: 0 0 10px 0;
+  margin: 0;
 }
 
 .login-warning-text {
   font-size: 0.84rem;
   color: #374151;
   line-height: 1.45;
-  margin: 0 0 10px 0;
+  margin: 0;
 }
 
 .btn-lockout-recover {
