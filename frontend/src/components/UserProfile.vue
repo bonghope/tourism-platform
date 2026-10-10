@@ -132,12 +132,11 @@
               </form>
             </div>
 
-            <!-- Card Xác thực Email (Mã OTP 5 phút riêng, Cập nhật sau) -->
+            <!-- Card Xác thực Email -->
             <div class="card glass-panel" style="margin-top: 24px;">
               <div class="card-title-row">
                 <div class="title-with-badge">
                   <h3 class="card-heading" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Liên kết & Cập nhật Email</h3>
-                  <span class="badge-optional">Cập nhật sau</span>
                 </div>
                 <span v-if="profile.Email" class="badge-verified">✓ Đã liên kết</span>
                 <span v-else class="badge-unverified">Chưa liên kết</span>
@@ -148,41 +147,44 @@
 
               <form @submit.prevent="handleVerifyEmailOtp">
                 <div class="form-group">
-                  <label>{{ profile.Email ? 'Đổi sang Email mới' : 'Nhập địa chỉ Email' }}</label>
-                  <div class="otp-input-inline-wrap">
+                  <label>{{ profile.Email ? 'Đổi sang Email mới' : 'Nhập địa chỉ Email' }} <span class="required-star">*</span></label>
+                  <input 
+                    v-model="emailForm.email" 
+                    type="email" 
+                    required 
+                    placeholder="name@example.com" 
+                    class="form-control" 
+                  />
+                </div>
+
+                <!-- Ô NHẬP MÃ OTP XÁC THỰC EMAIL (GIỐNG Ô SĐT) -->
+                <div class="form-group">
+                  <div class="label-row">
+                    <label>Mã xác thực OTP <span class="required-star">*</span></label>
+                    <span v-if="emailOtpSent" class="otp-badge-sent">Đã gửi mã</span>
+                  </div>
+                  <div class="otp-input-group-row">
                     <input 
-                      v-model="emailForm.email" 
-                      type="email" 
-                      required 
-                      placeholder="name@example.com" 
-                      class="form-control input-otp-clean" 
+                      v-model="emailForm.otp" 
+                      type="text" 
+                      maxlength="6" 
+                      placeholder="Nhập mã" 
+                      class="form-control otp-input-box" 
                     />
                     <button 
                       type="button" 
-                      class="btn-get-otp-inline" 
+                      class="btn-get-otp-action" 
                       @click="handleRequestEmailOtp" 
-                      :disabled="loadingEmailOtp || emailCountdown > 0 || !emailForm.email"
+                      :disabled="loadingEmailOtp || emailCountdown > 0 || !emailForm.email || !emailForm.email.includes('@')"
+                      :title="!emailForm.email ? 'Vui lòng nhập Email để lấy mã' : 'Lấy mã OTP'"
                     >
                       <span v-if="loadingEmailOtp" class="spinner-small"></span>
                       <span v-else-if="emailCountdown > 0">{{ emailCountdown }}s</span>
-                      <span v-else>{{ emailOtpSent ? 'Gửi lại mã' : 'Lấy mã OTP' }}</span>
+                      <span v-else>{{ emailOtpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
                     </button>
                   </div>
-                </div>
-
-                <!-- Ô NHẬP MÃ OTP XÁC THỰC EMAIL -->
-                <div class="form-group" v-if="emailOtpSent">
-                  <label>Mã xác thực OTP đã gửi đến email <span class="required-star">*</span></label>
-                  <input 
-                    v-model="emailForm.otp" 
-                    type="text" 
-                    maxlength="6" 
-                    required 
-                    placeholder="Nhập 6 số OTP" 
-                    class="form-control" 
-                  />
-                  <p class="field-hint text-success">
-                    Mã xác thực OTP đã gửi đến <strong>{{ emailForm.email }}</strong> (hiệu lực 5 phút).
+                  <p v-if="emailOtpSent" class="otp-help-text otp-success-text">
+                    Mã OTP đã gửi đến email <strong>{{ emailForm.email }}</strong>: <strong>{{ serverEmailOtp }}</strong>
                   </p>
                 </div>
 
@@ -761,6 +763,7 @@ const handleChangePassword = async () => {
 };
 
 const emailForm = ref({ email: '', otp: '' });
+const serverEmailOtp = ref('');
 const loadingEmailOtp = ref(false);
 const loadingVerifyEmail = ref(false);
 const emailOtpSent = ref(false);
@@ -768,19 +771,21 @@ const emailCountdown = ref(0);
 let emailOtpTimer = null;
 
 const handleRequestEmailOtp = async () => {
-  if (!emailForm.value.email || !emailForm.value.email.trim()) {
-    toastStore.warning('Vui lòng nhập địa chỉ email.');
+  const email = (emailForm.value.email || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    toastStore.warning('Vui lòng nhập địa chỉ email hợp lệ.');
     return;
   }
   loadingEmailOtp.value = true;
   try {
-    const res = await api.requestEmailOtp(emailForm.value.email.trim());
+    const res = await api.requestEmailOtp(email);
     if (res.success) {
       emailOtpSent.value = true;
-      toastStore.success(res.message);
       if (res.otp) {
-        toastStore.info(`Mã OTP xác thực Email của bạn: ${res.otp}`);
+        serverEmailOtp.value = res.otp;
+        emailForm.value.otp = res.otp;
       }
+      toastStore.success(res.message);
       emailCountdown.value = 60;
       if (emailOtpTimer) clearInterval(emailOtpTimer);
       emailOtpTimer = setInterval(() => {
@@ -812,6 +817,7 @@ const handleVerifyEmailOtp = async () => {
         authStore.user.email = profile.value.Email;
       }
       emailOtpSent.value = false;
+      serverEmailOtp.value = '';
       emailForm.value = { email: '', otp: '' };
       if (emailOtpTimer) clearInterval(emailOtpTimer);
     } else {
@@ -1277,38 +1283,82 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-.otp-input-inline-wrap {
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.otp-badge-sent {
+  font-size: 0.75rem;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.otp-input-group-row {
   display: flex;
   gap: 8px;
+  align-items: stretch;
   width: 100%;
 }
 
-.input-otp-clean {
+.otp-input-box {
   flex: 1;
+  height: 48px;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
-.btn-get-otp-inline {
+.btn-get-otp-action {
+  height: 48px;
+  min-width: 95px;
   padding: 0 18px;
-  background: var(--primary-light, #e6f7f2);
-  color: var(--primary-color, #007d68);
-  border: 1.5px solid rgba(0, 185, 154, 0.3);
+  background: var(--primary-color, #007d68);
+  color: #ffffff;
+  border: 1.5px solid var(--primary-color, #007d68);
   border-radius: 12px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: normal;
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s;
+  box-sizing: border-box;
   font-family: inherit;
 }
 
-.btn-get-otp-inline:hover:not(:disabled) {
-  background: var(--primary-color, #007d68);
-  color: #ffffff;
+.btn-get-otp-action:hover:not(:disabled) {
+  background: var(--primary-hover, #006050);
+  border-color: var(--primary-hover, #006050);
+  transform: translateY(-1px);
 }
 
-.btn-get-otp-inline:disabled {
-  opacity: 0.6;
+.btn-get-otp-action:disabled {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #94a3b8;
   cursor: not-allowed;
+  transform: none;
+}
+
+.otp-help-text {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.otp-success-text {
+  color: #059669;
 }
 
 .spinner-small {
