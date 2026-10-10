@@ -3,6 +3,10 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 
+const departures = require('../controllers/departureController');
+router.get('/tours/:tourId/departures',verifyToken,isAdmin,departures.list);
+router.post('/tours/:tourId/departures',verifyToken,isAdmin,departures.create);
+router.put('/tours/:tourId/departures/:departureId',verifyToken,isAdmin,departures.update);
 router.use(verifyToken, isAdmin); // Chặn 2 lớp bảo mật
 
 // 1. Users

@@ -283,6 +283,15 @@ class AdminApiService {
     return res;
   }
 
+  async departureRequest(path, options = {}) {
+    const res = await this.authFetch(API_BASE_URL + path, options);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Không thực hiện được yêu cầu lịch khởi hành.');
+    return data;
+  }
+  getDepartures(tourId) { return this.departureRequest('/admin/tours/' + encodeURIComponent(tourId) + '/departures'); }
+  createDeparture(tourId, data) { return this.departureRequest('/admin/tours/' + encodeURIComponent(tourId) + '/departures', { method:'POST', body:JSON.stringify(data) }); }
+  updateDeparture(tourId, departureId, data) { return this.departureRequest('/admin/tours/' + encodeURIComponent(tourId) + '/departures/' + encodeURIComponent(departureId), { method:'PUT', body:JSON.stringify(data) }); }
   getCurrentAdmin() {
     return this.currentAdmin;
   }

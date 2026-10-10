@@ -16,6 +16,7 @@
       <div class="form-section glass-panel">
         <h2>Thông tin liên hệ</h2>
         <form @submit.prevent="submitBooking" class="booking-form">
+          <div class="form-group"><label for="departure">Lịch khởi hành (*)</label><select id="departure" v-model="departureId" required><option value="" disabled>Chọn lịch khởi hành</option><option v-for="d in tour.departures" :key="d.DepartureID" :value="d.DepartureID">{{ formatDate(d.StartDate) }} – {{ formatDate(d.EndDate) }} · {{ d.AvailableSlots }} chỗ</option></select><p v-if="!tour.departures?.length">Chưa có lịch khởi hành đang mở bán.</p></div>
           <div class="form-group">
             <label>Họ và tên người đặt (*)</label>
             <input type="text" v-model="form.contactName" required placeholder="VD: Nguyễn Văn A" />
@@ -29,7 +30,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Số lượng khách (*)</label>
-              <input type="number" v-model="form.passengerCount" min="1" :max="Math.min(10, tour.AvailableSlots)" required />
+              <input type="number" v-model="form.passengerCount" min="1" :max="Math.min(10, (selectedDeparture?.AvailableSlots || 0))" required />
             </div>
             <div class="form-group">
               <label>Phương thức thanh toán</label>
@@ -45,7 +46,7 @@
           <div v-if="errorMsg" class="alert error-alert">⚠️ {{ errorMsg }}</div>
           <div v-if="successMsg" class="alert success-alert">✅ {{ successMsg }}</div>
 
-          <button type="submit" class="btn-book-submit" :disabled="isSubmitting">
+          <button type="submit" class="btn-book-submit" :disabled="isSubmitting || !selectedDeparture">
             <span v-if="isSubmitting" class="spinner-small"></span>
             <span v-else>Giữ chỗ & Tiếp tục thanh toán</span>
           </button>
@@ -59,8 +60,8 @@
           <h3>{{ tour.Title }}</h3>
           <ul class="summary-details">
             <li><strong>Mã Tour:</strong> {{ tour.TourID }}</li>
-            <li><strong>Khởi hành:</strong> {{ formatDate(tour.StartDate) }}</li>
-            <li><strong>Còn trống:</strong> {{ tour.AvailableSlots }} chỗ</li>
+            <li><strong>Khởi hành:</strong> {{ formatDate(selectedDeparture?.StartDate) }}</li>
+            <li><strong>Còn trống:</strong> {{ (selectedDeparture?.AvailableSlots || 0) }} chỗ</li>
           </ul>
           <div class="divider"></div>
           <div class="price-calc">
@@ -79,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { request, userId } from '../services/bookings';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -88,6 +89,8 @@ const router = useRouter();
 const defaultImage = 'https://images.unsplash.com/photo-1528181304800-259b08848526?w=800&q=80';
 
 const tour = ref(null);
+const departureId = ref('');
+const selectedDeparture = computed(() => tour.value?.departures?.find(d => d.DepartureID === departureId.value));
 const loadingTour = ref(true);
 const isSubmitting = ref(false);
 const errorMsg = ref('');
@@ -106,6 +109,7 @@ const fetchTour = async () => {
   errorMsg.value = '';
   try {
     tour.value = (await request(`/tours/${encodeURIComponent(route.params.id)}`)).data;
+    departureId.value = tour.value.departures?.some(d => d.DepartureID === route.query.departure) ? route.query.departure : tour.value.departures?.[0]?.DepartureID || '';
   } catch (err) {
     errorMsg.value = err.message;
   } finally {
@@ -121,8 +125,8 @@ const submitBooking = async () => {
 
   try {
     const count = Number(form.value.passengerCount);
-    if (!Number.isInteger(count) || count < 1 || count > Math.min(10, tour.value.AvailableSlots)) throw new Error('Số khách không hợp lệ (tối đa 10 người và không vượt số chỗ trống).');
-    const json = await request('/bookings', { method: 'POST', body: JSON.stringify({ tourId: tour.value.TourID, userId: userId(), ...form.value, passengerCount: count }) });
+    if (!Number.isInteger(count) || count < 1 || count > Math.min(10, selectedDeparture.value?.AvailableSlots || 0)) throw new Error('Số khách không hợp lệ (tối đa 10 người và không vượt số chỗ trống).');
+    const json = await request('/bookings', { method: 'POST', body: JSON.stringify({ tourId: tour.value.TourID, departureId: departureId.value, userId: userId(), ...form.value, passengerCount: count }) });
     await router.push({ path: `/payment/${encodeURIComponent(json.bookingId)}`, query: { method: form.value.paymentMethod } });
   } catch (err) {
     errorMsg.value = err.message;
@@ -132,7 +136,7 @@ const submitBooking = async () => {
 };
 
 const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-const formatDate = (dateString) => new Date(dateString).toLocaleDateString('vi-VN');
+const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'}) : '—';
 
 onMounted(() => {
   fetchTour();

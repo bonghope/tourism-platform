@@ -16,14 +16,17 @@ function res(){return {code:0,body:null,status(n){this.code=n;return this;},json
 const req = body => ({user:{userId:'USER_A'},body,params:{bookingId:'BOOK',tourId:'TOUR'}});
 test('history rejects another user before querying',async()=>{ const c=controller('bookingController.js',()=>{throw Error('must not query');}); const r=res();await c.api.getUserBookings({...req({}),params:{userId:'USER_B'}},r);assert.equal(r.code,403); });
 test('new booking uses current sale price and ignores client price', async () => {
-  const c = controller('bookingController.js', sql => sql.includes('SELECT AvailableSlots')
-    ? [[{ AvailableSlots: 10, Price: '2520000.00', OriginalPrice: '2800000.00', Status: 'PUBLISHED', StartDate: new Date(Date.now() + 86400000) }]] : [{}]);
+  const c = controller('bookingController.js', sql => sql.includes('SELECT d.AvailableSlots')
+    ? [[{ AvailableSlots: 10, Price: '2520000.00', OriginalPrice: '2800000.00', Status: 'PUBLISHED', DepartureStatus: 'OPEN', FutureDeparture: 1, StartDate: new Date(Date.now() + 86400000) }]] : [{}]);
   const r = res();
-  await c.api.createBooking(req({ tourId: 'TOUR', passengerCount: 2, contactName: 'Test', contactPhone: '0912345678', price: 1 }), r);
+  await c.api.createBooking(req({ tourId: 'TOUR', departureId:'DEPARTURE', passengerCount: 2, contactName: 'Test', contactPhone: '0912345678', price: 1 }), r);
   assert.equal(r.code, 201);
   const insert = c.calls.find(x => x.sql.includes('INSERT INTO Bookings'));
-  assert.equal(insert.params[6], '2520000.00');
-  assert.equal(insert.params[7], 5040000);
+  assert.equal(insert.params[7], '2520000.00');
+  assert.equal(insert.params[8], 5040000);
+  assert.ok(insert.params.includes('DEPARTURE'));
+  const seats = c.calls.find(x => x.sql.includes('UPDATE TourDepartures'));
+  assert.deepEqual(Array.from(seats.params), [2, 'DEPARTURE']);
 });
 test('invoice query restricts ownership',async()=>{const c=controller('bookingController.js',()=>[[]]);const r=res();await c.api.getBookingDetails(req({}),r);assert.equal(r.code,404);assert.ok(c.calls[0].sql.includes('b.UserID = ?'));assert.deepEqual(Array.from(c.calls[0].params),['BOOK','USER_A']);});
 test('cancel rejects another owner without returning slots',async()=>{const c=controller('bookingController.js',()=>[[{UserID:'USER_B',Status:'PENDING'}]]);const r=res();await c.api.cancelBookingByUser(req({}),r);assert.equal(r.body.success,false);assert.equal(c.calls.some(x=>/^\s*UPDATE/.test(x.sql)),false);});
@@ -31,7 +34,27 @@ test('mock payment is disabled by default and in production',async()=>{for(const
 test('mock payment requires owner and unexpired hold',async()=>{for(const [owner,seconds,expected] of [['USER_B',900,false],['USER_A',0,false],['USER_A',900,true]]){const c=controller('bookingController.js',sql=>sql.startsWith('SELECT')?[[{UserID:owner,Status:'PENDING',HoldRemainingSeconds:seconds}]]:[{}],{ENABLE_DEMO_PAYMENT:'true'});const r=res();await c.api.paymentWebhook(req({signature:'MOCK_VALID_SIGNATURE',bookingId:'BOOK'}),r);assert.equal(r.body.success,expected);assert.equal(c.calls.some(x=>/^\s*UPDATE/.test(x.sql)),expected);}});
 test('admin cannot return slots for REFUNDING twice',async()=>{const c=controller('admin.controller.js',()=>[[{Status:'REFUNDING',PassengerCount:2,TourID:'TOUR'}]]);const r=res();await c.api.forceCancelBooking(req({}),r);assert.equal(r.code,400);assert.equal(c.calls.some(x=>/^\s*UPDATE/.test(x.sql)),false);assert.ok(c.calls.some(x=>x.sql==='rollback'));});
 test('admin cancels pending without refund and returns slots once',async()=>{const c=controller('admin.controller.js',sql=>sql.startsWith('SELECT')?[[{Status:'PENDING',PassengerCount:2,TourID:'TOUR'}]]:[{}]);const r=res();await c.api.forceCancelBooking(req({}),r);assert.equal(r.code,200);assert.equal(c.calls.filter(x=>x.sql.includes('AvailableSlots +')).length,1);assert.equal(c.calls.find(x=>x.sql.startsWith('UPDATE Bookings')).params[0],'CANCELLED');});
-test('capacity keeps occupied seats and rejects shrinking below them',async()=>{for(const [capacity,expected,slots] of [[12,200,7],[4,400,null]]){const c=controller('admin.controller.js',sql=>sql.startsWith('SELECT')?[[{MaxSlots:10,AvailableSlots:5}]]:[{}]);const r=res();await c.api.updateTour(req({maxSlots:capacity}),r);assert.equal(r.code,expected);const update=c.calls.find(x=>x.sql.startsWith('UPDATE'));if(slots===null)assert.equal(update,undefined);else assert.equal(update.params[6],slots);}});
+test('capacity keeps occupied seats and rejects shrinking below them',async()=>{for(const [capacity,expected,slots] of [[12,200,7],[4,400,null]]){const c=controller('departureController.js',sql=>sql.startsWith('SELECT')?[[{DepartureID:'DEPARTURE',MaxSlots:10,AvailableSlots:5}]]:[{}]);const r=res();await c.api.update(req({maxSlots:capacity}),r);assert.equal(r.code,expected);const update=c.calls.find(x=>x.sql.startsWith('UPDATE'));if(slots===null)assert.equal(update,undefined);else assert.equal(update.params[3],slots);}});
+test('booked departure dates cannot change, preserving the review window',async()=>{
+  const c=controller('departureController.js',()=>[[{DepartureID:'DEPARTURE',HasBookings:1,MaxSlots:10,AvailableSlots:5}]]);
+  const r=res();await c.api.update(req({startDate:'2099-11-01T08:00',endDate:'2099-11-03T18:00'}),r);
+  assert.equal(r.code,400);assert.ok(r.body.message.includes('không thể sửa ngày'));
+  assert.equal(c.calls.some(x=>x.sql.startsWith('UPDATE')),false);
+  assert.ok(c.calls.some(x=>x.sql==='rollback'));
+});
+test('new departure stores Vietnam input in UTC and initializes its own capacity',async()=>{
+  const c=controller('departureController.js',sql=>sql.startsWith('SELECT')?[[{TourID:'TOUR'}]]:[{}]);
+  const r=res();await c.api.create(req({startDate:'2099-11-01T08:00',endDate:'2099-11-03T18:00',maxSlots:25}),r);
+  assert.equal(r.code,201);
+  const insert=c.calls.find(x=>x.sql.startsWith('INSERT INTO TourDepartures'));
+  assert.deepEqual(Array.from(insert.params).slice(1),['TOUR','2099-11-01 01:00:00','2099-11-03 11:00:00',25,25]);
+  assert.equal(c.calls.some(x=>x.sql.startsWith('UPDATE Tours')),false);
+});
+test('paid booking cannot review before becoming completed',async()=>{
+  const c=controller('reviewController.js',()=>[[{UserID:'USER_A',TourID:'TOUR',Status:'PAID',EndDate:new Date(Date.now()-86400000)}]]);
+  const r=res();await c.api.createReview(req({rating:5,content:'Good',tourId:'TOUR'}),r);
+  assert.equal(r.body.success,false);assert.equal(c.calls.some(x=>x.sql.includes('INSERT')),false);
+});
 test('review requires valid rating and content',async()=>{const c=controller('reviewController.js',()=>{throw Error('must not query');});for(const body of [{rating:6,content:'test'},{rating:5,comment:'wrong field'},{rating:5,content:' '}]){const r=res();await c.api.createReview(req(body),r);assert.equal(r.code,400);}});
 test('review rejects mismatched tour and refunding bookings',async()=>{for(const [status,tour] of [['PAID','OTHER'],['REFUNDING','TOUR']]){const c=controller('reviewController.js',()=>[[{UserID:'USER_A',TourID:'TOUR',Status:status,EndDate:new Date(Date.now()-86400000)}]]);const r=res();await c.api.createReview(req({rating:5,content:'Good',tourId:tour}),r);assert.equal(r.body.success,false);assert.equal(c.calls.some(x=>x.sql.includes('INSERT')),false);}});
 test('review takes owner and tour from booking and durably queues rating before commit',async()=>{const c=controller('reviewController.js',sql=>sql.startsWith('SELECT b.')?[[{UserID:'USER_A',TourID:'TOUR',Status:'COMPLETED',EndDate:new Date(Date.now()-86400000)}]]:sql.startsWith('SELECT ReviewID')?[[]]:[{}]);const r=res();await c.api.createReview(req({rating:4,content:'Good',userId:'SPOOF'}),r);assert.equal(r.code,201);const insert=c.calls.find(x=>x.sql.includes('INSERT'));assert.equal(insert.params[2],'USER_A');assert.equal(insert.params[3],'TOUR');const job=c.calls.find(x=>x.sql.includes('INSERT INTO Tour_Rating_Jobs'));assert.equal(job.params[0],'TOUR');assert.equal(c.calls.some(x=>x.sql.includes('UPDATE Tours')),false);});

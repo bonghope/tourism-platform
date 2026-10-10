@@ -25,8 +25,8 @@ import { getBooking, cancelBooking, money, date, statusLabel } from '../services
 import '../styles/bookings.css';
 const route = useRoute(), booking = ref(null), loading = ref(true), error = ref(''), busy = ref(false), confirming = ref(false), message = ref(''), reviewOpen = ref(false);
 const canCancel = computed(() => booking.value?.Status === 'PENDING' || (booking.value?.Status === 'PAID' && (!booking.value.StartDate || new Date(booking.value.StartDate).getTime() - Date.now() >= 72 * 3600000)));
-const canReview = computed(() => { const b = booking.value; if (!b || b.HasReview || !['PAID','COMPLETED'].includes(b.Status) || !b.EndDate) return false; const elapsed = Date.now() - new Date(b.EndDate).getTime(); return elapsed >= 0 && elapsed <= 30 * 86400000; });
-const reviewExpired = computed(() => { const b = booking.value; return b && !b.HasReview && ['PAID','COMPLETED'].includes(b.Status) && b.EndDate && Date.now() - new Date(b.EndDate).getTime() > 30 * 86400000; });
+const canReview = computed(() => { const b = booking.value; if (!b || b.HasReview || b.Status !== 'COMPLETED' || !b.EndDate) return false; const elapsed = Date.now() - new Date(b.EndDate).getTime(); return elapsed >= 0 && elapsed <= 30 * 86400000; });
+const reviewExpired = computed(() => { const b = booking.value; return b && !b.HasReview && b.Status === 'COMPLETED' && b.EndDate && Date.now() - new Date(b.EndDate).getTime() > 30 * 86400000; });
 async function reviewSubmitted() { reviewOpen.value = false; message.value = 'Cảm ơn bạn đã gửi đánh giá!'; await load(); }
 async function load() { loading.value = true; error.value = ''; booking.value = null; confirming.value = false; reviewOpen.value = false; try { booking.value = await getBooking(route.params.bookingId); } catch(e) { error.value = e.message; } finally { loading.value = false; } }
 async function cancel() { busy.value = true; error.value = ''; try { const result = await cancelBooking(booking.value.BookingID); message.value = result.message; await load(); } catch(e) { error.value = e.message; } finally { busy.value = false; confirming.value = false; } }

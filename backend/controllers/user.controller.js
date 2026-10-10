@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { departureColumns } = require('../utils/departures');
 const { ratingColumns } = require('../utils/tourRatings');
 
 // --- 1. LẤY & CẬP NHẬT HỒ SƠ KHÁCH HÀNG (USER PROFILE) ---
@@ -85,10 +86,10 @@ const getWishlist = async (req, res) => {
     try {
         const userId = req.user.userId;
         const query = `
-            SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, t.AvailableSlots, ${ratingColumns()}, f.SavedAt
+            SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, ${departureColumns()}, ${ratingColumns()}, f.SavedAt
             FROM User_Favorite_Tours f
             JOIN Tours t ON f.TourID = t.TourID
-            WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()
+            WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)
             ORDER BY f.SavedAt DESC
         `;
         const [tours] = await pool.query(query, [userId]);

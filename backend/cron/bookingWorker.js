@@ -13,10 +13,10 @@ cron.schedule('* * * * *', async () => {
         // Expired PENDING bookings are handled by cancelBooking.js.
         // Complete paid bookings only when a valid end date has passed.
         const [completedResult] = await connection.query(`
-            UPDATE Bookings b 
-            JOIN Tours t ON b.TourID = t.TourID 
-            SET b.Status = 'COMPLETED' 
-            WHERE b.Status = 'PAID' AND t.EndDate IS NOT NULL AND t.EndDate > t.StartDate AND t.EndDate <= NOW()
+            UPDATE Bookings b
+            JOIN TourDepartures d ON b.DepartureID = d.DepartureID
+            SET b.Status = 'COMPLETED'
+            WHERE b.Status = 'PAID' AND d.EndDate IS NOT NULL AND d.EndDate > d.StartDate AND d.EndDate <= UTC_TIMESTAMP()
         `);
 
         if (completedResult.affectedRows > 0) {

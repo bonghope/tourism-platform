@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { departureColumns } = require('../utils/departures');
 const { ratingColumns } = require('../utils/tourRatings');
 
 class TourController {
@@ -20,7 +21,7 @@ class TourController {
             }
             const userId = req.user ? req.user.userId : null;
 
-            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.DiscountPercent, t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, ${ratingColumns()}`;
+            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.DiscountPercent, t.Duration, ${departureColumns()}, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t`;
             if (destinationId) {
                 fromClause += ` INNER JOIN Tour_Destinations td ON t.TourID = td.TourID`;
@@ -31,10 +32,10 @@ class TourController {
                 fromClause += ` LEFT JOIN User_Favorite_Tours f ON t.TourID = f.TourID AND f.UserID = ?`;
             }
 
-            let whereClause = ` WHERE t.Status = 'PUBLISHED' AND t.StartDate > NOW()`;
+            let whereClause = ` WHERE t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)`;
             const params = [];
             if (req.query.promotion === 'true') {
-                whereClause += ` AND t.OriginalPrice > t.Price AND t.AvailableSlots > 0`;
+                whereClause += ` AND t.OriginalPrice > t.Price `;
             }
 
             if (userId) params.push(userId);
@@ -57,20 +58,18 @@ class TourController {
                 whereClause += ` AND t.Price <= ?`;
                 params.push(Number(maxPrice));
             }
-            if (startDate) {
-                whereClause += ` AND t.StartDate >= ?`;
-                params.push(startDate);
-            }
-            if (endDate) {
-                whereClause += ` AND t.StartDate < DATE_ADD(?, INTERVAL 1 DAY)`;
-                params.push(endDate);
+            if (startDate || endDate) {
+                whereClause += " AND EXISTS(SELECT 1 FROM TourDepartures ds WHERE ds.TourID=t.TourID AND ds.Status='OPEN' AND ds.StartDate>UTC_TIMESTAMP() AND ds.AvailableSlots>0";
+                if (startDate) { whereClause += " AND ds.StartDate >= CONVERT_TZ(?,'+07:00','+00:00')"; params.push(startDate); }
+                if (endDate) { whereClause += " AND ds.StartDate < DATE_ADD(CONVERT_TZ(?,'+07:00','+00:00'), INTERVAL 1 DAY)"; params.push(endDate); }
+                whereClause += ')';
             }
 
             const countQuery = `SELECT COUNT(DISTINCT t.TourID) as total` + fromClause + whereClause;
             const [countRows] = await pool.query(countQuery, params);
             const totalItems = countRows[0].total;
 
-            let query = selectClause + fromClause + whereClause + ` GROUP BY t.TourID ORDER BY t.StartDate ASC LIMIT ? OFFSET ?`;
+            let query = selectClause + fromClause + whereClause + ` GROUP BY t.TourID ORDER BY StartDate ASC LIMIT ? OFFSET ?`;
             const offset = (page - 1) * limit;
             params.push(Number(limit), Number(offset));
 
@@ -100,7 +99,7 @@ class TourController {
             const tourId = req.params.id;
             const userId = req.user ? req.user.userId : null;
 
-            let tourQuery = `SELECT t.*, ${ratingColumns()}`;
+            let tourQuery = `SELECT t.*, ${departureColumns()}, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t`;
             const params = [tourId];
 
@@ -118,6 +117,8 @@ class TourController {
             }
 
             const tour = tourRows[0];
+            const [departures] = await pool.query("SELECT DepartureID, TourID, DATE_FORMAT(StartDate, '%Y-%m-%dT%H:%i:%sZ') AS StartDate, DATE_FORMAT(EndDate, '%Y-%m-%dT%H:%i:%sZ') AS EndDate, MaxSlots, AvailableSlots FROM TourDepartures WHERE TourID = ? AND Status='OPEN' AND StartDate > UTC_TIMESTAMP() AND AvailableSlots > 0 ORDER BY StartDate", [tourId]);
+            tour.departures = departures;
             tour.isFavorite = !!tour.isFavorite;
 
             const [imageRows] = await pool.query(`SELECT ImageURL FROM Tour_Images WHERE TourID = ?`, [tourId]);
@@ -161,10 +162,10 @@ class TourController {
         try {
             const userId = req.user.userId;
             const query = `
-                SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}, f.SavedAt
+                SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, ${departureColumns()}, ${ratingColumns()}, f.SavedAt
                 FROM Tours t
                 INNER JOIN User_Favorite_Tours f ON t.TourID = f.TourID
-                WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()
+                WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)
                 ORDER BY f.SavedAt DESC
             `;
             const [rows] = await pool.query(query, [userId]);

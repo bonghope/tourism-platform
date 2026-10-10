@@ -44,6 +44,7 @@
           <p v-if="itineraryOverview" class="tour-overview">{{ itineraryOverview }}</p>
           
           <div class="booking-card">
+            <label for="tour-departure">Chọn lịch khởi hành</label><select id="tour-departure" v-model="departureId" style="width:100%;padding:12px;border-radius:12px;margin:12px 0"><option v-for="d in tour.departures" :key="d.DepartureID" :value="d.DepartureID">{{ formatDate(d.StartDate) }} – {{ formatDate(d.EndDate) }} · {{ d.AvailableSlots }} chỗ</option></select><p v-if="!tour.departures?.length">Chưa có lịch khởi hành đang mở bán.</p>
             <div class="price-section">
               <span class="price-label">Giá / khách:</span>
               <del v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="original-price">{{ formatPrice(tour.OriginalPrice) }}</del>
@@ -51,11 +52,11 @@
               <span v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="discount-note">Tiết kiệm {{ formatPrice(tour.OriginalPrice - tour.Price) }} / khách</span>
             </div>
             <div class="slots-info">
-              <span>Khởi hành: <strong>{{ formatDate(tour.StartDate) }}</strong></span>
+              <span>Khởi hành: <strong>{{ formatDate(selectedDeparture?.StartDate) }}</strong></span>
               <span v-if="tour.EndDate">Kết thúc: <strong>{{ formatDate(tour.EndDate) }}</strong></span>
-              <span>Số chỗ còn nhận: <strong>{{ tour.AvailableSlots }}</strong> / {{ tour.MaxSlots }}</span>
+              <span>Số chỗ còn nhận: <strong>{{ (selectedDeparture?.AvailableSlots || 0) }}</strong> / {{ (selectedDeparture?.MaxSlots || 0) }}</span>
             </div>
-            <button class="btn-book-large" :disabled="!canBook" @click="$router.push('/booking/' + tour.TourID)">
+            <button class="btn-book-large" :disabled="!canBook || !selectedDeparture" @click="$router.push({ path: '/booking/' + tour.TourID, query: { departure: departureId } })">
               {{ canBook ? 'Đặt chuyến đi này' : 'Chuyến đi đã đóng đăng ký' }}
             </button>
           </div>
@@ -109,6 +110,8 @@ const defaultTourCover = 'https://images.unsplash.com/photo-1528181304800-259b08
 
 const route = useRoute();
 const tour = ref(null);
+const departureId = ref('');
+const selectedDeparture = computed(() => tour.value?.departures?.find(d => d.DepartureID === departureId.value));
 const loading = ref(true);
 const error = ref(null);
 const activeImgIndex = ref(0);
@@ -124,7 +127,7 @@ const itineraryDays = computed(() => {
 });
 const itineraryOverview = computed(() => itineraryDays.value[0]?.overview || '');
 const tripNotes = computed(() => itineraryDays.value[0]?.notes || []);
-const canBook = computed(() => Number(tour.value?.AvailableSlots) > 0 && new Date(tour.value?.StartDate).getTime() > Date.now());
+const canBook = computed(() => Number(selectedDeparture.value?.AvailableSlots) > 0 && new Date(selectedDeparture.value?.StartDate).getTime() > Date.now());
 
 const coverImage = computed(() => {
   if (tour.value?.images && tour.value.images.length > 0) {
@@ -153,6 +156,7 @@ const fetchTourDetail = async () => {
     const json = await res.json();
     if (json.success) {
       tour.value = json.data;
+      departureId.value = tour.value.departures?.[0]?.DepartureID || '';
     } else {
       error.value = json.message;
     }
@@ -168,6 +172,7 @@ const formatPrice = (price) => {
 };
 
 const formatDate = (dateString) => {
+  if (!dateString) return 'Chưa có lịch';
   const date = new Date(dateString);
   return date.toLocaleDateString('vi-VN');
 };

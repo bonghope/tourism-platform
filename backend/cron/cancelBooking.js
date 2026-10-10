@@ -9,15 +9,15 @@ cron.schedule('* * * * *', async () => {
 
         // Tìm khóa các đơn PENDING đã quá hạn 15 phút
         const [expiredBookings] = await connection.query(
-            "SELECT BookingID, TourID, PassengerCount FROM Bookings WHERE Status = 'PENDING' AND HoldExpiresAt < NOW() FOR UPDATE"
+            "SELECT BookingID, DepartureID, PassengerCount FROM Bookings WHERE Status = 'PENDING' AND HoldExpiresAt < NOW() FOR UPDATE"
         );
 
         if (expiredBookings.length > 0) {
             for (let booking of expiredBookings) {
                 // 1. Trả lại vé vào bảng Tours
                 await connection.query(
-                    'UPDATE Tours SET AvailableSlots = AvailableSlots + ? WHERE TourID = ?',
-                    [booking.PassengerCount, booking.TourID]
+                    'UPDATE TourDepartures SET AvailableSlots = AvailableSlots + ? WHERE DepartureID = ?',
+                    [booking.PassengerCount, booking.DepartureID]
                 );
                 
                 // 2. Đổi trạng thái đơn thành CANCELLED

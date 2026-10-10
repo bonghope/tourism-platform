@@ -1,8 +1,9 @@
 const pool = require('../config/database');
 
 exports.createBooking = async (req, res) => {
-    const { tourId,  passengerCount, contactName, contactPhone } = req.body;
+    const { tourId, departureId, passengerCount, contactName, contactPhone } = req.body;
     const userId = req.user.userId;
+    if (!departureId || !tourId) return res.status(400).json({success:false,message:'Vui lòng chọn lịch khởi hành.'});
     let connection; // Khai báo ở đây để khối catch/finally có thể nhìn thấy
 
     try {
@@ -14,19 +15,19 @@ exports.createBooking = async (req, res) => {
 }
 
         const [tours] = await connection.query(
-    'SELECT AvailableSlots, Price, Status, StartDate FROM Tours WHERE TourID = ? FOR UPDATE',
-    [tourId]
+    "SELECT d.AvailableSlots, t.Price, t.Status, d.Status AS DepartureStatus, (d.StartDate > UTC_TIMESTAMP()) AS FutureDeparture FROM TourDepartures d JOIN Tours t ON t.TourID=d.TourID WHERE d.DepartureID = ? AND d.TourID = ? FOR UPDATE",
+    [departureId, tourId]
 );
 
         if (tours.length === 0) {
             throw new Error('Tour không tồn tại hoặc đã ngừng bán.');
         }
-        
-        const tour = tours[0]; 
+
+        const tour = tours[0];
         if (tour.Status !== 'PUBLISHED') {
             throw new Error('Tour này hiện chưa được mở bán.');
         }
-        if (new Date(tour.StartDate) <= new Date()) {
+        if (tour.DepartureStatus !== 'OPEN' || !tour.FutureDeparture) {
             throw new Error('Tour này đã khởi hành, không thể đặt thêm.');
         }
 
@@ -35,33 +36,33 @@ exports.createBooking = async (req, res) => {
         }
 
         await connection.query(
-            'UPDATE Tours SET AvailableSlots = AvailableSlots - ? WHERE TourID = ?',
-            [passengerCount, tourId]
+            'UPDATE TourDepartures SET AvailableSlots = AvailableSlots - ? WHERE DepartureID = ?',
+            [passengerCount, departureId]
         );
 
         const totalPrice = tour.Price * passengerCount;
-        const bookingId = 'BKG-' + Date.now(); 
+        const bookingId = 'BKG-' + Date.now();
 
         await connection.query(
-    `INSERT INTO Bookings (BookingID, UserID, TourID, ContactName, ContactPhone, PassengerCount, BasePrice, 
-    TotalPrice, Status, HoldExpiresAt, CreatedAt) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())`,
-    [bookingId, userId, tourId, contactName, contactPhone, passengerCount, tour.Price, totalPrice]
+    `INSERT INTO Bookings (BookingID, UserID, TourID, DepartureID, ContactName, ContactPhone, PassengerCount, BasePrice,
+    TotalPrice, Status, HoldExpiresAt, CreatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())`,
+    [bookingId, userId, tourId, departureId, contactName, contactPhone, passengerCount, tour.Price, totalPrice]
 );
 
         await connection.commit();
-        
-        res.status(201).json({ 
-            success: true, 
-            message: 'Giữ chỗ thành công. Vui lòng thanh toán trong 15 phút.', 
-            bookingId: bookingId 
+
+        res.status(201).json({
+            success: true,
+            message: 'Giữ chỗ thành công. Vui lòng thanh toán trong 15 phút.',
+            bookingId: bookingId
         });
 
     } catch (error) {
-        if (connection) await connection.rollback(); 
+        if (connection) await connection.rollback();
         res.status(400).json({ success: false, message: error.message });
     } finally {
-        if (connection) connection.release(); 
+        if (connection) connection.release();
     }
 };
 
@@ -76,7 +77,7 @@ exports.paymentWebhook = async (req, res) => {
     if (process.env.NODE_ENV === 'production' || process.env.ENABLE_DEMO_PAYMENT !== 'true') {
         return res.status(503).json({ success: false, message: 'Thanh toán thử chưa được bật trên backend.' });
     }
-    const isValidSignature = signature === 'MOCK_VALID_SIGNATURE'; 
+    const isValidSignature = signature === 'MOCK_VALID_SIGNATURE';
     if (!isValidSignature) {
         return res.status(403).json({ success: false, message: 'Chữ ký không hợp lệ!' });
     }
@@ -133,8 +134,8 @@ exports.cancelBookingByUser = async (req, res) => {
 
         // Lấy thông tin đơn hàng và nối với bảng Tours để check StartDate
         const [bookings] = await connection.query(
-            `SELECT b.UserID, b.Status, b.PassengerCount, b.TourID, t.StartDate 
-             FROM Bookings b JOIN Tours t ON b.TourID = t.TourID 
+            `SELECT b.UserID, b.Status, b.PassengerCount, b.TourID, b.DepartureID, DATE_FORMAT(d.StartDate, '%Y-%m-%dT%H:%i:%sZ') AS StartDate
+             FROM Bookings b JOIN Tours t ON b.TourID = t.TourID JOIN TourDepartures d ON d.DepartureID=b.DepartureID
              WHERE b.BookingID = ? FOR UPDATE`,
             [bookingId]
         );
@@ -149,8 +150,8 @@ exports.cancelBookingByUser = async (req, res) => {
                 "UPDATE Bookings SET Status = 'CANCELLED' WHERE BookingID = ?", [bookingId]
             );
             await connection.query(
-                "UPDATE Tours SET AvailableSlots = AvailableSlots + ? WHERE TourID = ?",
-                [booking.PassengerCount, booking.TourID]
+                "UPDATE TourDepartures SET AvailableSlots = AvailableSlots + ? WHERE DepartureID = ?",
+                [booking.PassengerCount, booking.DepartureID]
             );
             await connection.commit();
             return res.status(200).json({ success: true, message: 'Đã hủy đơn giữ chỗ thành công.' });
@@ -168,8 +169,8 @@ exports.cancelBookingByUser = async (req, res) => {
                 "UPDATE Bookings SET Status = 'REFUNDING' WHERE BookingID = ?", [bookingId]
             );
             await connection.query(
-                "UPDATE Tours SET AvailableSlots = AvailableSlots + ? WHERE TourID = ?",
-                [booking.PassengerCount, booking.TourID]
+                "UPDATE TourDepartures SET AvailableSlots = AvailableSlots + ? WHERE DepartureID = ?",
+                [booking.PassengerCount, booking.DepartureID]
             );
             // TODO: Ghi Log hệ thống tại đây
             await connection.commit();
@@ -200,10 +201,10 @@ exports.getUserBookings = async (req, res) => {
         const [bookings] = await connection.query(
             `SELECT b.BookingID, b.TourID, t.Title, b.PassengerCount, b.TotalPrice, b.Status,
                     DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
-                    DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt, t.StartDate
-             FROM Bookings b 
-             JOIN Tours t ON b.TourID = t.TourID 
-             WHERE b.UserID = ? 
+                    DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt, DATE_FORMAT(d.StartDate, '%Y-%m-%dT%H:%i:%sZ') AS StartDate
+             FROM Bookings b
+             JOIN Tours t ON b.TourID = t.TourID JOIN TourDepartures d ON d.DepartureID=b.DepartureID
+             WHERE b.UserID = ?
              ORDER BY b.CreatedAt DESC`,
             [userId]
         );
@@ -227,9 +228,9 @@ exports.getBookingDetails = async (req, res) => {
             `SELECT b.*,
                     DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
                     DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt,
-                    t.Title, t.StartDate, t.EndDate, EXISTS(SELECT 1 FROM Reviews r WHERE r.BookingID = b.BookingID) AS HasReview, TIMESTAMPDIFF(SECOND, NOW(), b.HoldExpiresAt) AS HoldRemainingSeconds
-             FROM Bookings b 
-             JOIN Tours t ON b.TourID = t.TourID 
+                    t.Title, DATE_FORMAT(d.StartDate, '%Y-%m-%dT%H:%i:%sZ') AS StartDate, DATE_FORMAT(d.EndDate, '%Y-%m-%dT%H:%i:%sZ') AS EndDate, EXISTS(SELECT 1 FROM Reviews r WHERE r.BookingID = b.BookingID) AS HasReview, TIMESTAMPDIFF(SECOND, NOW(), b.HoldExpiresAt) AS HoldRemainingSeconds
+             FROM Bookings b
+             JOIN Tours t ON b.TourID = t.TourID JOIN TourDepartures d ON d.DepartureID=b.DepartureID
              WHERE b.BookingID = ? AND b.UserID = ?`,
             [bookingId, req.user.userId]
         );
