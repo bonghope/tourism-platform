@@ -55,7 +55,14 @@
           <p v-if="itineraryOverview" class="tour-overview">{{ itineraryOverview }}</p>
           
           <div class="booking-card">
-            <label for="tour-departure">Chọn lịch khởi hành</label><select id="tour-departure" v-model="departureId" style="width:100%;padding:12px;border-radius:12px;margin:12px 0"><option v-for="d in tour.departures" :key="d.DepartureID" :value="d.DepartureID">{{ formatDate(d.StartDate) }} – {{ formatDate(d.EndDate) }} · {{ d.AvailableSlots }} chỗ</option></select><p v-if="!tour.departures?.length">Chưa có lịch khởi hành đang mở bán.</p>
+            <div class="departure-picker">
+              <label for="tour-departure">Chọn lịch khởi hành</label>
+              <select id="tour-departure" v-model="departureId" :disabled="!tour.departures?.length">
+                <option v-if="!tour.departures?.length" value="">Chưa có lịch mở bán</option>
+                <option v-for="d in tour.departures" :key="d.DepartureID" :value="d.DepartureID">{{ formatDate(d.StartDate) }} – {{ formatDate(d.EndDate) }} · Còn {{ d.AvailableSlots }} chỗ</option>
+              </select>
+            </div>
+            <div class="booking-summary">
             <div class="price-section">
               <span class="price-label">Giá / khách:</span>
               <del v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="original-price">{{ formatPrice(tour.OriginalPrice) }}</del>
@@ -64,12 +71,13 @@
             </div>
             <div class="slots-info">
               <span>Khởi hành: <strong>{{ formatDate(selectedDeparture?.StartDate) }}</strong></span>
-              <span v-if="tour.EndDate">Kết thúc: <strong>{{ formatDate(tour.EndDate) }}</strong></span>
+              <span v-if="selectedDeparture?.EndDate">Kết thúc: <strong>{{ formatDate(selectedDeparture.EndDate) }}</strong></span>
               <span>Số chỗ còn nhận: <strong>{{ (selectedDeparture?.AvailableSlots || 0) }}</strong> / {{ (selectedDeparture?.MaxSlots || 0) }}</span>
             </div>
             <button class="btn-book-large" :disabled="!canBook || !selectedDeparture" @click="$router.push({ path: '/booking/' + tour.TourID, query: { departure: departureId } })">
               {{ canBook ? 'Đặt chuyến đi này' : 'Chuyến đi đã đóng đăng ký' }}
             </button>
+            </div>
           </div>
         </div>
 
@@ -305,11 +313,17 @@ watch(() => route.params.id, fetchTourDetail, { immediate: true });
   padding: 24px;
   border-radius: var(--radius-lg);
   border: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  gap: 24px;
   margin-bottom: 50px;
 }
+.departure-picker { display: grid; gap: 10px; min-width: 0; }
+.departure-picker label { font-weight: 700; color: var(--secondary-color); }
+.departure-picker select { width: 100%; min-width: 0; box-sizing: border-box; padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 12px; background: white; color: var(--text-main); font: inherit; cursor: pointer; }
+.departure-picker select:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 3px; }
+.booking-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px 32px; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 24px; }
+.price-section { min-width: 0; }
+.booking-summary .btn-book-large { grid-column: 1 / -1; justify-self: end; }
 .price-label {
   display: block;
   font-size: 0.9rem;
@@ -340,9 +354,11 @@ watch(() => route.params.id, fetchTourDetail, { immediate: true });
   border-radius: 6px;
 }
 .price-value {
-  font-size: 2.2rem;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
   font-weight: 800;
   color: var(--primary-color);
+  display: block;
+  overflow-wrap: anywhere;
 }
 .slots-info {
   display: flex;
@@ -397,7 +413,9 @@ watch(() => route.params.id, fetchTourDetail, { immediate: true });
   .content-wrapper { margin: 0 8px; padding: 24px 16px; }
   .title { font-size: 1.8rem; }
   .badges { flex-wrap: wrap; }
-  .booking-card { flex-direction: column; align-items: stretch; gap: 20px; margin-bottom: 28px; }
+  .booking-card { padding: 20px 16px; gap: 20px; margin-bottom: 28px; }
+  .booking-summary { grid-template-columns: 1fr; gap: 20px; padding-top: 20px; }
+  .booking-summary .btn-book-large { width: 100%; justify-self: stretch; padding: 16px 20px; }
   .day-card { padding: 18px 14px; gap: 12px; }
   .day-number { width: 32px; height: 36px; font-size: .9rem; }
   .day-activities li { grid-template-columns: 1fr; gap: 4px; }
