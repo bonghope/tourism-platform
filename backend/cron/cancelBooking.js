@@ -1,7 +1,6 @@
 const cron = require('node-cron');
 const pool = require('../config/database');
 
-// Cú pháp '* * * * *' báo hệ thống cứ 1 phút lại chạy vòng lặp này 1 lần
 cron.schedule('* * * * *', async () => {
     const connection = await pool.getConnection();
     

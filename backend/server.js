@@ -16,6 +16,7 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 require('./cron/cancelBooking');
 app.use(cors());
+app.use('/uploads/reviews', express.static(require('./utils/reviewImages').directory, { dotfiles:'deny', index:false, setHeaders:res => res.setHeader('X-Content-Type-Options','nosniff') }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -55,6 +56,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 require('./cron/bookingWorker');
+require('./cron/ratingWorker').startRatingWorker(require('./config/database'));
 app.listen(PORT, () => {
     console.log(`Server đang chạy cực mượt tại http://localhost:${PORT}`);
 });

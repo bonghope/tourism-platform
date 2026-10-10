@@ -34,6 +34,10 @@ const toastStore = useToastStore();
   --secondary-color: #0f172a;
   --accent-color: #f59e0b;
   --bg-color: #f8fafc;
+  --page-background:
+    radial-gradient(ellipse at 0% 25%, rgba(201, 243, 230, 0.26) 0%, transparent 48%),
+    radial-gradient(ellipse at 100% 80%, rgba(255, 226, 189, 0.23) 0%, transparent 48%),
+    linear-gradient(to right, #f9fdfb 0%, #ffffff 45%, #ffffff 55%, #fffdf8 100%);
   --card-bg: rgba(255, 255, 255, 0.7);
   --text-main: #1e293b;
   --text-muted: #64748b;
@@ -76,6 +80,7 @@ body {
 }
 .main-content {
   flex: 1;
+  background: var(--page-background);
 }
 
 .toast-container {
@@ -112,6 +117,11 @@ body {
 .toast-item.error {
   border-left: 4px solid #ef4444;
   color: #991b1b;
+}
+.toast-item.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border-left: 4px solid #f59e0b;
 }
 .toast-item.info {
   border-left: 4px solid #2563eb;

@@ -23,6 +23,7 @@
       
       <div class="description-section glass-panel">
         <h2>Giới thiệu về {{ destination.Name }}</h2>
+        <PhotoCredit :image="destination.ImageURL" />
         <p class="desc-text">{{ destination.Description || 'Chưa có bài viết mô tả chi tiết cho địa danh này. Vui lòng quay lại sau.' }}</p>
       </div>
 
@@ -49,6 +50,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import TourCard from './TourCard.vue';
+import PhotoCredit from './PhotoCredit.vue';
 
 const route = useRoute();
 const destId = route.params.id;

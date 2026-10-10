@@ -1,7 +1,10 @@
 <template>
   <nav class="navbar glass-panel">
     <div class="nav-brand">
-      <router-link to="/" class="logo-link"><span class="logo">TaVivu</span></router-link>
+      <router-link to="/" class="logo-link">
+        <img src="/images/logo-mint.png" class="brand-logo" alt="" />
+        <span class="logo">TaVivu</span>
+      </router-link>
     </div>
 
     <div class="nav-links">
@@ -9,6 +12,7 @@
       <router-link to="/tours">Tour</router-link>
       <router-link to="/destinations">Điểm đến</router-link>
       <a href="#promo-adventure-section" @click="scrollToPromo">Khuyến mãi</a>
+
       <router-link to="/about">Về chúng tôi</router-link>
     </div>
 
@@ -27,6 +31,8 @@
           <router-link to="/profile" class="pop-link" @click="menuOpen = false">
             Hồ sơ cá nhân
           </router-link>
+          <router-link to="/bookings" class="pop-link" @click="menuOpen = false">Lịch sử đặt tour</router-link>
+          <router-link to="/wishlist" class="pop-link" @click="menuOpen = false">Yêu thích</router-link>
           <div class="pop-divider"></div>
           <button class="pop-link pop-logout" @click="handleLogout">
             Đăng xuất
@@ -70,20 +76,21 @@ const openAuthModal = (tab) => {
   isAuthOpen.value = true;
 };
 
-const handleLogout = () => {
+const handleLogout = async () => {
   menuOpen.value = false;
-  authStore.logout();
+  await authStore.logout();
   toastStore.info('Đã đăng xuất.');
   router.push('/');
 };
 
-const scrollToPromo = (e) => {
+const scrollToPromo = async (e) => {
   e.preventDefault();
   const el = document.getElementById('promo-adventure-section') || document.querySelector('.promo-adventure-banner');
   if (el) {
     el.scrollIntoView({ behavior: 'smooth' });
   } else {
-    router.push('/');
+    await router.push('/');
+    document.getElementById('promo-adventure-section')?.scrollIntoView({ behavior: 'smooth' });
   }
 };
 
@@ -117,29 +124,42 @@ onUnmounted(() => {
   padding: 0 24px;
   z-index: 1000;
   border-radius: 32px;
+  background: rgba(250, 252, 249, 0.97);
+  border: 1px solid rgba(8, 47, 53, 0.1);
+  box-shadow: 0 8px 28px rgba(8, 47, 53, 0.1);
 }
 .logo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
+}
+.brand-logo {
+  width: 58px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: brightness(0.8) saturate(1.1);
 }
 .logo {
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--primary-color);
+  color: #00b99a;
   letter-spacing: -0.5px;
 }
 .nav-links {
   display: flex;
-  gap: 32px;
+  gap: 18px;
 }
 .nav-links a {
   text-decoration: none;
-  color: var(--text-main);
+  color: #243b40;
   font-weight: 500;
   transition: color 0.3s;
 }
 .nav-links a:hover,
 .nav-links a.router-link-exact-active {
-  color: var(--primary-color);
+  color: #007d68;
 }
 .nav-actions {
   display: flex;
@@ -149,8 +169,8 @@ onUnmounted(() => {
 .btn-login {
   padding: 10px 24px;
   background-color: transparent;
-  color: var(--secondary-color);
-  border: 1px solid var(--secondary-color);
+  color: #007d68;
+  border: 1px solid rgba(0, 125, 104, 0.4);
   border-radius: 24px;
   font-weight: 700;
   cursor: pointer;
@@ -158,12 +178,12 @@ onUnmounted(() => {
   font-family: inherit;
 }
 .btn-login:hover {
-  background-color: rgba(15, 23, 42, 0.05);
+  background-color: rgba(0, 255, 204, 0.1);
 }
 .btn-register {
   padding: 10px 24px;
-  background-color: var(--primary-color);
-  color: white;
+  background-color: #00ffcc;
+  color: #082f35;
   border: none;
   border-radius: 24px;
   font-weight: 700;
@@ -173,7 +193,7 @@ onUnmounted(() => {
 }
 .btn-register:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 255, 204, 0.25);
 }
 
 /* Menu người dùng đã đăng nhập */
@@ -268,4 +288,9 @@ onUnmounted(() => {
   background: #fef2f2;
   color: #dc2626;
 }
+</style>
+
+<style scoped>
+@media (max-width: 1050px) { .navbar { width: 96%; padding: 0 16px; } .nav-links { gap: 12px; font-size: .85rem; } .nav-actions .btn-register { display:none; } }
+@media (max-width: 720px) { .navbar { border-radius: 20px; height:auto; min-height:64px; flex-wrap:wrap; padding:10px 16px; gap:8px; } .nav-links { order:3; width:100%; overflow-x:auto; white-space:nowrap; padding-bottom:4px; } .btn-login { padding:6px 12px; } }
 </style>

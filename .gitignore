@@ -40,3 +40,6 @@ frontend-nhom/
 backend-manh/
 frontend-manh-user/
 
+
+# Uploaded review photos
+backend/uploads/

@@ -1,6 +1,19 @@
 const pool = require('../config/database');
+const { ratingColumns } = require('../utils/tourRatings');
 
 class DestinationController {
+    // GET /api/destinations
+    static async getAll(req, res, next) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT DestinationID, Name, Slug, Description, Keywords, ImageURL, Status FROM Destinations WHERE Status = 'PUBLISHED' ORDER BY Name ASC`
+            );
+            res.status(200).json({ success: true, total: rows.length, data: rows });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // GET /api/destinations/search?keyword=...
     static async search(req, res, next) {
         try {
@@ -34,46 +47,37 @@ class DestinationController {
             // 1. Ưu tiên gợi ý theo Địa danh yêu thích của User
             if (userId) {
                 const [destRows] = await pool.query(`
-                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
+                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}
                     FROM Tours t
                     INNER JOIN Tour_Destinations td ON t.TourID = td.TourID
                     INNER JOIN User_Favorite_Destinations fd ON td.DestinationID = fd.DestinationID
-                    WHERE fd.UserID = ? AND t.Status = 'PUBLISHED'
+                    WHERE fd.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW() AND t.AvailableSlots > 0
+                    ORDER BY t.StartDate ASC
                     LIMIT 4
                 `, [userId]);
                 rows = destRows;
 
-                // 2. Nếu chưa có Địa danh yêu thích -> Gợi ý dựa trên Tour yêu thích của User
+                // 2. No eligible destination tours: return only explicitly saved tours.
                 if (rows.length === 0) {
                     const [tourRows] = await pool.query(`
-                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount
+                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}
                         FROM Tours t
-                        WHERE (
-                            t.TourID IN (SELECT TourID FROM User_Favorite_Tours WHERE UserID = ?)
-                            OR t.TourID IN (
-                                SELECT td.TourID FROM Tour_Destinations td
-                                WHERE td.DestinationID IN (
-                                    SELECT DISTINCT td2.DestinationID 
-                                    FROM User_Favorite_Tours ft 
-                                    JOIN Tour_Destinations td2 ON ft.TourID = td2.TourID 
-                                    WHERE ft.UserID = ?
-                                )
-                            )
-                        )
-                        AND t.Status = 'PUBLISHED'
+                        INNER JOIN User_Favorite_Tours ft ON ft.TourID = t.TourID
+                        WHERE ft.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW() AND t.AvailableSlots > 0
+                        ORDER BY t.StartDate ASC
                         LIMIT 4
-                    `, [userId, userId]);
+                    `, [userId]);
                     rows = tourRows;
                 }
             }
 
-            // 3. Fallback: Nếu không có hoặc khách chưa đăng nhập -> Lấy 4 tour nổi bật nhất
+            // 3. No eligible favorites, or guest: choose random bookable tours.
             if (rows.length === 0) {
                 const [fallbackRows] = await pool.query(`
-                    SELECT TourID, Title, Slug, Price, Duration, AverageRating, ReviewCount
+                    SELECT TourID, Title, Slug, Price, OriginalPrice, Duration, StartDate, ${ratingColumns('Tours')}
                     FROM Tours
-                    WHERE Status = 'PUBLISHED'
-                    ORDER BY AverageRating DESC, ReviewCount DESC
+                    WHERE Status = 'PUBLISHED' AND StartDate > NOW() AND AvailableSlots > 0
+                    ORDER BY RAND()
                     LIMIT 4
                 `);
                 rows = fallbackRows;
@@ -125,7 +129,7 @@ class DestinationController {
             const destinationId = req.params.id;
             const userId = req.user ? req.user.userId : null;
 
-            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.AverageRating, t.ReviewCount`;
+            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t INNER JOIN Tour_Destinations td ON t.TourID = td.TourID`;
             const params = [];
 
@@ -135,7 +139,7 @@ class DestinationController {
                 params.push(userId);
             }
 
-            let query = selectClause + fromClause + ` WHERE td.DestinationID = ? AND t.Status = 'PUBLISHED'`;
+            let query = selectClause + fromClause + ` WHERE td.DestinationID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()`;
             params.push(destinationId);
 
             const [rows] = await pool.query(query, params);

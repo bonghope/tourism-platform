@@ -4,6 +4,7 @@
       <!-- Header Brand -->
       <div class="login-header">
         <div class="brand-badge-row">
+          <img src="/images/logo-mint.png" class="login-brand-logo-img" alt="TaVivu" />
           <span class="brand-name">TaVivu</span>
           <span class="portal-badge">ADMIN PORTAL</span>
         </div>
@@ -125,29 +126,6 @@
           {{ loading ? 'Đang xác thực...' : 'Đăng nhập Hệ thống Quản trị' }}
         </button>
       </form>
-
-      <!-- Khối tài khoản Quản trị mẫu tiện lợi cho người chấm / demo -->
-      <div class="quick-admin-section">
-        <div class="quick-header">
-          <span class="quick-title">TÀI KHOẢN QUẢN TRỊ VIÊN MẪU (NHẤP ĐIỀN NHANH):</span>
-        </div>
-        <div class="quick-admin-list">
-          <div 
-            v-for="adm in sampleAdmins" 
-            :key="adm.phone"
-            class="sample-admin-chip"
-            @click="fillCredentials(adm)"
-            :title="'Bấm để điền: ' + adm.name"
-          >
-            <div class="chip-avatar-icon">👑</div>
-            <div class="chip-content">
-              <span class="chip-name">{{ adm.name }}</span>
-              <span class="chip-phone">{{ adm.phone }} • pass: {{ adm.password }}</span>
-            </div>
-            <span class="chip-action">Điền</span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -159,8 +137,8 @@ import adminApi from '../services/api';
 const emit = defineEmits(['login-success']);
 
 const form = ref({
-  account: '0987654321', // Mặc định số điện thoại của Quản trị viên Nguyễn Văn Mạnh
-  password: 'admin123'
+  account: '',
+  password: ''
 });
 
 const showPassword = ref(false);
@@ -169,18 +147,6 @@ const loading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 const isLocked = ref(false);
-
-const sampleAdmins = [
-  { name: 'Nguyễn Văn Mạnh', phone: '0987654321', email: 'manh.nguyen@webdulich.com', password: 'admin123' },
-  { name: 'Vũ Đức Tài', phone: '0912345678', email: 'tai.vu@webdulich.com', password: 'admin123' },
-  { name: 'Trần Thị Linh', phone: '0909123456', email: 'linh.tran@webdulich.com', password: 'admin123' }
-];
-
-const fillCredentials = (adm) => {
-  form.value.account = adm.phone;
-  form.value.password = adm.password;
-  errorMessage.value = '';
-};
 
 const handleLogin = async () => {
   if (!form.value.account || !form.value.password) {
@@ -259,15 +225,20 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.login-brand-logo-img {
+  width: 52px;
+  height: 40px;
+  object-fit: contain;
+  filter: brightness(0.9) saturate(1.15);
 }
 
 .brand-name {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #00b99a;
   letter-spacing: -0.5px;
 }
 
@@ -277,7 +248,7 @@ const handleLogin = async () => {
   letter-spacing: 0.08em;
   padding: 3px 9px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: #007d68;
   color: #ffffff;
 }
 
@@ -411,9 +382,9 @@ const handleLogin = async () => {
 }
 
 .form-input:focus {
-  border-color: #3b82f6;
+  border-color: #00b99a;
   background: rgba(30, 41, 59, 0.95);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 3px rgba(0, 185, 154, 0.25);
 }
 
 .btn-toggle-eye {
@@ -455,12 +426,12 @@ const handleLogin = async () => {
   font-size: 0.95rem;
   font-weight: 700;
   margin-top: 4px;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #00b99a 0%, #007d68 100%);
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.35);
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #00a88a 0%, #006050 100%);
   transform: translateY(-1px);
 }
 
@@ -475,78 +446,5 @@ const handleLogin = async () => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-/* Khối tài khoản Quản trị mẫu */
-.quick-admin-section {
-  margin-top: 26px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.quick-header {
-  margin-bottom: 10px;
-}
-
-.quick-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.05em;
-}
-
-.quick-admin-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sample-admin-chip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 12px;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sample-admin-chip:hover {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: rgba(59, 130, 246, 0.4);
-  transform: translateX(3px);
-}
-
-.chip-avatar-icon {
-  font-size: 1rem;
-}
-
-.chip-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.chip-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #f1f5f9;
-}
-
-.chip-phone {
-  font-size: 0.72rem;
-  color: #94a3b8;
-}
-
-.chip-action {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #60a5fa;
-  padding: 2px 8px;
-  background: rgba(59, 130, 246, 0.2);
-  border-radius: 4px;
 }
 </style>

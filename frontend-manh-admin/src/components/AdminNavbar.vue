@@ -2,7 +2,8 @@
   <header class="admin-header glass-panel">
     <div class="header-left">
       <div class="brand-title">
-        <span class="brand-logo">TaVivu</span>
+        <img src="/images/logo-mint.png" class="brand-logo-img" alt="TaVivu" />
+        <span class="brand-logo-text">TaVivu</span>
         <span class="portal-tag">ADMIN PORTAL</span>
       </div>
     </div>
@@ -32,7 +33,7 @@
                 <span class="header-label">DANH SÁCH QUẢN TRỊ VIÊN</span>
                 <span class="header-count">{{ adminList.length }} Admin</span>
               </div>
-              <p class="header-sub">Hệ thống hỗ trợ nhiều Admin - Nhấp chọn để chuyển đổi</p>
+              <p class="header-sub">Danh sách tài khoản Quản trị viên trong hệ thống</p>
             </div>
 
             <div class="dropdown-list">
@@ -40,13 +41,12 @@
                 v-for="adm in adminList" 
                 :key="adm.UserID"
                 :class="['admin-item', adm.UserID === currentAdminId ? 'active' : '']"
-                @click="selectAdmin(adm)"
               >
                 <img :src="adm.AvatarURL || defaultAvatar" class="item-avatar" alt="Admin" />
                 <div class="item-info">
                   <div class="item-name-wrap">
                     <span class="item-name">{{ adm.FullName }}</span>
-                    <span v-if="adm.UserID === currentAdminId" class="current-tag">Đang chọn</span>
+                    <span v-if="adm.UserID === currentAdminId" class="current-tag">Đang đăng nhập</span>
                   </div>
                   <span class="item-email">{{ adm.Email }}</span>
                 </div>
@@ -59,7 +59,7 @@
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                Phân quyền thêm Admin (Tab Người dùng)
+                Phân quyền Admin
               </button>
               <button class="btn-logout-dropdown" @click="handleLogout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -137,20 +137,6 @@ const initCurrentAdmin = async () => {
   }
 };
 
-const selectAdmin = async (adm) => {
-  if (adm.UserID === currentAdminId.value) {
-    isOpen.value = false;
-    return;
-  }
-  const updated = await adminApi.switchAdmin(adm.UserID);
-  if (updated) {
-    currentAdmin.value = updated;
-    emit('admin-switched', updated);
-    window.dispatchEvent(new CustomEvent('admin-changed', { detail: updated }));
-  }
-  isOpen.value = false;
-};
-
 const goToUsersTab = () => {
   isOpen.value = false;
   emit('change-tab', 'users');
@@ -211,20 +197,27 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-.brand-logo {
-  font-size: 1.45rem;
+.brand-logo-img {
+  width: 48px;
+  height: 36px;
+  object-fit: contain;
+  filter: brightness(0.85) saturate(1.1);
+}
+
+.brand-logo-text {
+  font-size: 1.55rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--primary-mint, #00b99a);
   letter-spacing: -0.5px;
 }
 
 .portal-tag {
   font-size: 0.72rem;
   font-weight: 800;
-  background: #0f172a;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   letter-spacing: 0.8px;
 }
 
@@ -263,7 +256,7 @@ onUnmounted(() => {
   height: 38px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #2563eb;
+  border: 2px solid var(--primary-color, #007d68);
 }
 
 .admin-meta {
@@ -288,9 +281,9 @@ onUnmounted(() => {
 .admin-badge {
   font-size: 0.65rem;
   font-weight: 800;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
+  border: 1px solid rgba(0, 185, 154, 0.25);
   padding: 1px 6px;
   border-radius: 10px;
   letter-spacing: 0.4px;
@@ -351,8 +344,8 @@ onUnmounted(() => {
 .header-count {
   font-size: 0.7rem;
   font-weight: 700;
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
   padding: 2px 7px;
   border-radius: 10px;
 }
@@ -375,17 +368,13 @@ onUnmounted(() => {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 10px;
-  cursor: pointer;
+  cursor: default;
   transition: background 0.15s ease;
 }
 
-.admin-item:hover {
-  background: #f8fafc;
-}
-
 .admin-item.active {
-  background: #eff6ff;
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: var(--primary-light, #e6f7f2);
+  border: 1px solid rgba(0, 185, 154, 0.25);
 }
 
 .item-avatar {
@@ -436,7 +425,7 @@ onUnmounted(() => {
 .check-icon {
   font-size: 0.9rem;
   font-weight: 800;
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
 }
 
 .dropdown-footer {

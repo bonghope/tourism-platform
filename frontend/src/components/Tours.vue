@@ -6,15 +6,14 @@
       <p class="page-subtitle">Hành trình khám phá thế giới của bạn bắt đầu từ đây</p>
     </div>
 
-    <div class="tours-body-wrapper">
-      <div class="brush-decor-tours brush-tours-left"></div>
-      <div class="brush-decor-tours brush-tours-right"></div>
-      <div class="tours-content">
+    <div class="tours-body-wrapper">      <div class="tours-content">
+        <TourFilters :model-value="filters" @update:model-value="Object.assign(filters, $event)" :error="filterError" @apply="applyFilters" @reset="resetFilters" />
+        <p v-if="!loading && !error" class="result-count" role="status">Tìm thấy {{ totalItems }} tour phù hợp</p>
         <div v-if="loading" class="loading-state">
           <div class="spinner"></div>
           <p>Đang tải danh sách Tour...</p>
         </div>
-        
+
         <div v-else-if="error" class="error-state glass-panel">
           <p>⚠️ {{ error }}</p>
           <button @click="fetchTours" class="btn-retry">Thử lại</button>
@@ -23,38 +22,83 @@
         <div v-else class="tours-grid">
           <TourCard v-for="tour in tours" :key="tour.TourID" :tour="tour" />
           <div v-if="tours.length === 0" class="empty-state glass-panel">
-            Hiện tại chưa có tour nào khả dụng.
+            Không có tour phù hợp. Hãy thử mở rộng khoảng giá hoặc ngày khởi hành.
+            <button class="btn-reset" @click="resetFilters">Xóa bộ lọc</button>
           </div>
         </div>
+        <nav v-if="!loading && !error && totalPages > 1" class="pagination" aria-label="Phân trang tour">
+          <button :disabled="page === 1" @click="changePage(page - 1)">Trang trước</button>
+          <span>Trang {{ page }} / {{ totalPages }}</span>
+          <button :disabled="page === totalPages" @click="changePage(page + 1)">Trang sau</button>
+        </nav>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch, onUnmounted } from 'vue';
 import TourCard from './TourCard.vue';
+import TourFilters from './TourFilters.vue';
+import { useAuthStore } from '../stores/auth';
 
 const tours = ref([]);
 const loading = ref(true);
 const error = ref(null);
+const authStore = useAuthStore();
+const emptyFilters = () => ({ keyword: '', minPrice: '', maxPrice: '', startDate: '', endDate: '' });
+const filters = reactive(emptyFilters());
+const appliedFilters = ref(emptyFilters());
+const filterError = ref('');
+const page = ref(1);
+const totalItems = ref(0);
+const totalPages = ref(0);
+let pendingRequest;
+
+const applyFilters = () => {
+  filterError.value = '';
+  const hasValue = v => v !== '';
+  if ([filters.minPrice, filters.maxPrice].some(v => hasValue(v) && (!Number.isFinite(Number(v)) || Number(v) < 0))
+    || (hasValue(filters.minPrice) && hasValue(filters.maxPrice) && Number(filters.minPrice) > Number(filters.maxPrice))) {
+    filterError.value = 'Khoảng giá không hợp lệ. Giá đến phải lớn hơn hoặc bằng giá từ.';
+    return;
+  }
+  if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+    filterError.value = 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.';
+    return;
+  }
+  appliedFilters.value = { ...filters, keyword: filters.keyword.trim() };
+  page.value = 1;
+  fetchTours();
+};
+const resetFilters = () => { Object.assign(filters, emptyFilters()); applyFilters(); };
+const changePage = value => { page.value = value; fetchTours(); };
 
 const fetchTours = async () => {
+  pendingRequest?.abort();
+  const request = new AbortController();
+  pendingRequest = request;
   loading.value = true;
   error.value = null;
   try {
-    // Không truyền limit để lấy tất cả, hoặc truyền limit lớn (ví dụ: 50)
-    const res = await fetch('http://localhost:3000/api/tours?limit=50');
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+    const params = new URLSearchParams({ page: String(page.value), limit: '9' });
+    Object.entries(appliedFilters.value).forEach(([key, value]) => { if (value !== '') params.set(key, value); });
+    const headers = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {};
+    const res = await fetch(`${apiBase}/tours?${params}`, { headers, signal: request.signal });
     const json = await res.json();
     if (json.success) {
       tours.value = json.data;
+      totalItems.value = json.totalItems;
+      totalPages.value = json.totalPages;
     } else {
       error.value = json.message;
     }
   } catch (err) {
+    if (err.name === 'AbortError') return;
     error.value = 'Không thể kết nối đến Máy chủ Backend.';
   } finally {
-    loading.value = false;
+    if (pendingRequest === request) loading.value = false;
   }
 };
 
@@ -62,9 +106,19 @@ onMounted(() => {
   window.scrollTo(0, 0);
   fetchTours();
 });
+watch(() => authStore.token, fetchTours);
+onUnmounted(() => pendingRequest?.abort());
 </script>
 
 <style scoped>
+.btn-reset, .pagination button { padding: 12px 20px; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer; }
+.btn-reset, .pagination button { border: 1px solid #cadfd5; background: white; color: #295c4c; }
+.result-count { margin-bottom: 20px; color: #3e6658; }
+.empty-state { grid-column: 1 / -1; padding: 35px; text-align: center; }
+.empty-state button { display: block; margin: 18px auto 0; }
+.pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 32px; }
+.pagination button:disabled { opacity: .45; cursor: default; }
+@media (max-width: 480px) { .tours-grid { grid-template-columns: minmax(0, 1fr) !important; } .pagination { gap: 8px; font-size: .8rem; } .pagination button { padding: 10px; } }
 .tours-page {
   padding-bottom: 80px;
 }
@@ -101,32 +155,11 @@ onMounted(() => {
 .tours-body-wrapper {
   position: relative;
   width: 100%;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 42%, #fffbeb 100%);
+  background: var(--page-background);
   overflow: hidden;
   padding: 60px 0 100px;
 }
 
-.brush-decor-tours {
-  position: absolute;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
-  filter: blur(50px);
-}
-.brush-tours-left {
-  top: -5%;
-  left: -5%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(45, 212, 191, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
-}
-.brush-tours-right {
-  bottom: -5%;
-  right: -5%;
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
-}
 
 .tours-content {
   max-width: 1200px;

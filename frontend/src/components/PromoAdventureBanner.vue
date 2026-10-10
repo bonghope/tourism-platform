@@ -1,9 +1,6 @@
 <template>
   <section class="promo-adventure-section">
     <!-- Nền trang trí phong cách cọ vẽ / brushstroke như hình mẫu -->
-    <div class="brush-decor brush-left"></div>
-    <div class="brush-decor brush-right"></div>
-    
     <div class="promo-container">
       <!-- CỘT TRÁI: NỘI DUNG & CÂU NÓI TRUYỀN CẢM HỨNG -->
       <div class="promo-content">
@@ -115,34 +112,12 @@
 .promo-adventure-section {
   position: relative;
   padding: 90px 24px;
-  background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 40%, #fffbeb 100%);
+  background: var(--page-background);
   overflow: hidden;
   border-top: 1px solid rgba(229, 231, 235, 0.6);
   border-bottom: 1px solid rgba(229, 231, 235, 0.6);
 }
 
-/* HIỆU ỨNG VẼ MÀU BRUSHSTROKE NỀN */
-.brush-decor {
-  position: absolute;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
-  filter: blur(40px);
-}
-.brush-left {
-  top: -10%;
-  left: -5%;
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, rgba(45, 212, 191, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
-}
-.brush-right {
-  bottom: -15%;
-  right: -5%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
-}
 
 .promo-container {
   max-width: 1200px;

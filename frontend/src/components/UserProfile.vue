@@ -1,19 +1,5 @@
 <template>
   <div class="profile-page-wrapper">
-    <!-- NỀN DANH THẮNG CHUYỂN ĐỘNG LIÊN TỤC -->
-    <div class="scenic-bg-container">
-      <transition-group name="fade-bg">
-        <div 
-          v-for="(bg, idx) in backgroundImages" 
-          :key="bg" 
-          v-show="currentBgIndex === idx"
-          class="scenic-bg-layer" 
-          :style="{ backgroundImage: `url('${bg}')` }"
-        ></div>
-      </transition-group>
-      <div class="scenic-overlay"></div>
-    </div>
-
     <div class="profile-container">
       <div class="profile-wrapper">
         <div class="profile-header">
@@ -453,18 +439,6 @@ const toastStore = useToastStore();
 
 const defaultAvatar = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150';
 
-// Danh sách hình nền danh thắng Việt Nam chạy liên tục
-const backgroundImages = [
-  'https://images.unsplash.com/photo-1528127269322-539801943592?w=1600&q=80', // Vịnh Hạ Long
-  'https://images.unsplash.com/photo-1570789210967-2cac24afeb00?w=1600&q=80', // Sa Pa ruộng bậc thang
-  'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1600&q=80', // Phố Cổ Hội An
-  'https://images.unsplash.com/photo-1669819894338-53ab7afc6958?w=1600&q=80', // Tràng An Ninh Bình
-  'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=1600&q=80', // Cầu Vàng Đà Nẵng
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&q=80'  // Biển đảo Phú Quốc
-];
-const currentBgIndex = ref(0);
-let bgTimer = null;
-
 const profile = ref({
   UserID: '',
   FullName: '',
@@ -857,13 +831,9 @@ const formatDate = (dateStr) => {
 
 onMounted(() => {
   loadProfile();
-  bgTimer = setInterval(() => {
-    currentBgIndex.value = (currentBgIndex.value + 1) % backgroundImages.length;
-  }, 6000);
 });
 
 onUnmounted(() => {
-  if (bgTimer) clearInterval(bgTimer);
   if (emailOtpTimer) clearInterval(emailOtpTimer);
 });
 </script>
@@ -872,51 +842,6 @@ onUnmounted(() => {
 .profile-page-wrapper {
   position: relative;
   min-height: 100vh;
-}
-
-/* NỀN DANH THẮNG CHUYỂN ĐỘNG LIÊN TỤC */
-.scenic-bg-container {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.scenic-bg-layer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  transform: scale(1.04);
-  animation: bgZoom 16s ease-in-out infinite alternate;
-}
-
-.scenic-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.58) 50%, rgba(30, 41, 59, 0.78) 100%);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-
-.fade-bg-enter-active,
-.fade-bg-leave-active {
-  transition: opacity 1.5s ease-in-out;
-}
-
-.fade-bg-enter-from,
-.fade-bg-leave-to {
-  opacity: 0;
-}
-
-@keyframes bgZoom {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.08); }
 }
 
 .profile-container {
@@ -935,15 +860,13 @@ onUnmounted(() => {
 .profile-header h1 {
   font-size: 2.2rem;
   font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  color: var(--text-main);
 }
 
 .profile-header p {
-  color: #e2e8f0;
+  color: var(--text-muted);
   font-size: 1rem;
   margin-top: 6px;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
 }
 
 .profile-grid {

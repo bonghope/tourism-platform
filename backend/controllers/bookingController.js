@@ -2,18 +2,15 @@ const pool = require('../config/database');
 
 exports.createBooking = async (req, res) => {
     const { tourId,  passengerCount, contactName, contactPhone } = req.body;
-    // TODO: Tích hợp với Module Auth (Login). 
-    // Tạm thời lấy từ body để test, nếu không truyền sẽ mặc định là U04
-    const userId = req.body.userId || 'U04';
+    const userId = req.user.userId;
     let connection; // Khai báo ở đây để khối catch/finally có thể nhìn thấy
 
     try {
-        // Đưa lệnh lấy kết nối VÀO TRONG khối try
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        if (passengerCount <= 0 || passengerCount > 10) {
-           return res.status(400).json({ success: false, message: 'Số lượng khách phải từ 1 đến 10 người.' });
+        if (!Number.isInteger(passengerCount) || passengerCount <= 0 || passengerCount > 10) {
+           throw new Error('Số lượng khách phải từ 1 đến 10 người.');
 }
 
         const [tours] = await connection.query(
@@ -76,6 +73,9 @@ exports.paymentWebhook = async (req, res) => {
     let connection;
 
     // Giả lập kiểm tra Signature (Thực tế sẽ dùng HMAC SHA256 với Secret Key của VNPay/Momo)
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_DEMO_PAYMENT !== 'true') {
+        return res.status(503).json({ success: false, message: 'Thanh toán thử chưa được bật trên backend.' });
+    }
     const isValidSignature = signature === 'MOCK_VALID_SIGNATURE'; 
     if (!isValidSignature) {
         return res.status(403).json({ success: false, message: 'Chữ ký không hợp lệ!' });
@@ -83,19 +83,26 @@ exports.paymentWebhook = async (req, res) => {
 
     try {
         connection = await pool.getConnection();
+        await connection.beginTransaction();
         const [bookings] = await connection.query(
-            "SELECT Status FROM Bookings WHERE BookingID = ?", [bookingId]
+            "SELECT UserID, Status, HoldExpiresAt, TIMESTAMPDIFF(SECOND, NOW(), HoldExpiresAt) AS HoldRemainingSeconds FROM Bookings WHERE BookingID = ? FOR UPDATE", [bookingId]
         );
 
         if (bookings.length === 0) throw new Error('Không tìm thấy hóa đơn.');
+        if (bookings[0].UserID !== req.user.userId) throw new Error('Bạn không có quyền thanh toán đơn này.');
 
         // Tính luỹ đẳng (Idempotency): Nếu đã PAID rồi thì return 200 OK luôn, không làm gì cả
         if (bookings[0].Status === 'PAID') {
+            await connection.commit();
             return res.status(200).json({ success: true, message: 'Đơn hàng đã được ghi nhận thanh toán trước đó.' });
         }
 
-        if (bookings[0].Status === 'CANCELLED') {
+        if (bookings[0].Status !== 'PENDING') {
             throw new Error('Đơn hàng đã bị hủy, thanh toán thất bại.');
+        }
+
+        if (bookings[0].HoldRemainingSeconds == null || Number(bookings[0].HoldRemainingSeconds) <= 0) {
+            throw new Error('Đã hết thời gian giữ chỗ. Vui lòng đặt tour lại.');
         }
 
         // Đổi trạng thái PENDING -> PAID và lưu TransactionID
@@ -104,9 +111,11 @@ exports.paymentWebhook = async (req, res) => {
             [paymentMethod, transactionId, bookingId]
         );
 
+        await connection.commit();
         res.status(200).json({ success: true, message: 'Xác nhận thanh toán thành công.' });
         // TODO: Gọi hàm gửi Email E-ticket tại đây
     } catch (error) {
+        if (connection) await connection.rollback();
         res.status(400).json({ success: false, message: error.message });
     } finally {
         if (connection) connection.release();
@@ -124,7 +133,7 @@ exports.cancelBookingByUser = async (req, res) => {
 
         // Lấy thông tin đơn hàng và nối với bảng Tours để check StartDate
         const [bookings] = await connection.query(
-            `SELECT b.Status, b.PassengerCount, b.TourID, t.StartDate 
+            `SELECT b.UserID, b.Status, b.PassengerCount, b.TourID, t.StartDate 
              FROM Bookings b JOIN Tours t ON b.TourID = t.TourID 
              WHERE b.BookingID = ? FOR UPDATE`,
             [bookingId]
@@ -132,6 +141,7 @@ exports.cancelBookingByUser = async (req, res) => {
 
         if (bookings.length === 0) throw new Error('Không tìm thấy hóa đơn.');
         const booking = bookings[0];
+        if (booking.UserID !== req.user.userId) throw new Error('Bạn không có quyền hủy đơn này.');
 
         if (booking.Status === 'PENDING') {
             // KỊCH BẢN 1: Hủy đơn PENDING -> CANCELLED, hoàn vé lập tức
@@ -142,7 +152,8 @@ exports.cancelBookingByUser = async (req, res) => {
                 "UPDATE Tours SET AvailableSlots = AvailableSlots + ? WHERE TourID = ?",
                 [booking.PassengerCount, booking.TourID]
             );
-            res.status(200).json({ success: true, message: 'Đã hủy đơn giữ chỗ thành công.' });
+            await connection.commit();
+            return res.status(200).json({ success: true, message: 'Đã hủy đơn giữ chỗ thành công.' });
 
         } else if (booking.Status === 'PAID') {
             // KỊCH BẢN 2: Hủy đơn PAID -> Kiểm tra Time-window >= 72h
@@ -161,7 +172,8 @@ exports.cancelBookingByUser = async (req, res) => {
                 [booking.PassengerCount, booking.TourID]
             );
             // TODO: Ghi Log hệ thống tại đây
-            res.status(200).json({ success: true, message: 'Đơn hàng đã chuyển sang trạng thái chờ hoàn tiền.' });
+            await connection.commit();
+            return res.status(200).json({ success: true, message: 'Đơn hàng đã chuyển sang trạng thái chờ hoàn tiền.' });
 
         } else {
             throw new Error(`Không thể hủy đơn hàng đang ở trạng thái: ${booking.Status}`);
@@ -179,13 +191,16 @@ exports.cancelBookingByUser = async (req, res) => {
 
 // Xem lịch sử đặt tour của một User
 exports.getUserBookings = async (req, res) => {
-    const { userId } = req.params;
+    const userId = req.user.userId;
+    if (req.params.userId !== userId) return res.status(403).json({ success:false, message:'Bạn không có quyền xem lịch sử này.' });
     let connection;
 
     try {
         connection = await pool.getConnection();
         const [bookings] = await connection.query(
-            `SELECT b.BookingID, b.TourID, t.Title, b.PassengerCount, b.TotalPrice, b.Status, b.CreatedAt 
+            `SELECT b.BookingID, b.TourID, t.Title, b.PassengerCount, b.TotalPrice, b.Status,
+                    DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
+                    DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt, t.StartDate
              FROM Bookings b 
              JOIN Tours t ON b.TourID = t.TourID 
              WHERE b.UserID = ? 
@@ -209,11 +224,14 @@ exports.getBookingDetails = async (req, res) => {
     try {
         connection = await pool.getConnection();
         const [bookings] = await connection.query(
-            `SELECT b.*, t.Title 
+            `SELECT b.*,
+                    DATE_FORMAT(b.CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt,
+                    DATE_FORMAT(b.HoldExpiresAt, '%Y-%m-%dT%H:%i:%sZ') AS HoldExpiresAt,
+                    t.Title, t.StartDate, t.EndDate, EXISTS(SELECT 1 FROM Reviews r WHERE r.BookingID = b.BookingID) AS HasReview, TIMESTAMPDIFF(SECOND, NOW(), b.HoldExpiresAt) AS HoldRemainingSeconds
              FROM Bookings b 
              JOIN Tours t ON b.TourID = t.TourID 
-             WHERE b.BookingID = ?`,
-            [bookingId]
+             WHERE b.BookingID = ? AND b.UserID = ?`,
+            [bookingId, req.user.userId]
         );
 
         if (bookings.length === 0) {

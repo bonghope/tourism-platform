@@ -8,7 +8,11 @@ import DestinationDetail from '../components/DestinationDetail.vue';
 import Wishlist from '../components/Wishlist.vue';
 import UserProfile from '../components/UserProfile.vue';
 
+import BookingCheckout from '../components/BookingCheckout.vue';
 const routes = [
+    { path: '/bookings', name: 'BookingHistory', component: () => import('../components/BookingHistory.vue') },
+    { path: '/bookings/:bookingId', name: 'InvoiceDetail', component: () => import('../components/InvoiceDetail.vue') },
+    { path: '/payment/:bookingId', name: 'Payment', component: () => import('../components/PaymentPage.vue') },
     {
         path: '/',
         name: 'Home',
@@ -48,6 +52,11 @@ const routes = [
         path: '/profile',
         name: 'UserProfile',
         component: UserProfile
+    },
+    {
+    path: '/booking/:id',
+    name: 'BookingCheckout',
+    component: BookingCheckout
     }
 ];
 
@@ -56,4 +65,8 @@ const router = createRouter({
     routes
 });
 
+router.beforeEach(to => {
+    const privatePage = ['BookingHistory','InvoiceDetail','Payment','BookingCheckout','UserProfile','Wishlist'].includes(to.name);
+    if (privatePage && !localStorage.getItem('user_access_token')) { alert('Vui lòng đăng nhập để tiếp tục.'); return { path:'/', query:{ redirect:to.fullPath } }; }
+});
 export default router;
