@@ -156,15 +156,15 @@ onMounted(() => {
 .form-row { display: flex; gap: 20px; }
 .form-group label { font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
 .form-group input, .form-group select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s; font-family: inherit; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+.form-group input:focus, .form-group select:focus { border-color: var(--primary-mint, #00b99a); box-shadow: 0 0 0 3px rgba(0, 185, 154, 0.18); }
 
 /* Alerts */
 .alert { padding: 12px 16px; border-radius: 8px; font-weight: 600; font-size: 0.95rem; }
 .error-alert { background: #fee2e2; color: #dc2626; border: 1px solid #f87171; }
 .success-alert { background: #dcfce3; color: #16a34a; border: 1px solid #4ade80; }
 
-.btn-book-submit { padding: 16px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; }
-.btn-book-submit:hover:not(:disabled) { background: #1d4ed8; }
+.btn-book-submit { padding: 16px; background: var(--primary-gradient, var(--primary-color)); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; box-shadow: 0 4px 14px rgba(0, 125, 104, 0.25); }
+.btn-book-submit:hover:not(:disabled) { opacity: 0.95; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0, 125, 104, 0.35); }
 .btn-book-submit:disabled { opacity: 0.7; cursor: not-allowed; }
 
 /* Summary Section */

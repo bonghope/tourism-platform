@@ -16,9 +16,9 @@
           <div class="admin-meta">
             <div class="admin-name-row">
               <span class="admin-name">{{ currentAdminName }}</span>
-              <span class="admin-badge">Admin</span>
+              <span class="admin-badge">ADMIN</span>
             </div>
-            <span class="admin-role">{{ currentAdminEmail }}</span>
+            <span class="admin-role">Quản trị viên</span>
           </div>
           <svg class="dropdown-chevron" :class="{ 'rotate': isOpen }" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -31,7 +31,7 @@
             <div class="dropdown-header">
               <div class="header-title-row">
                 <span class="header-label">DANH SÁCH QUẢN TRỊ VIÊN</span>
-                <span class="header-count">{{ adminList.length }} Admin</span>
+                <span class="header-count">{{ adminList.length }} ADMIN</span>
               </div>
               <p class="header-sub">Danh sách tài khoản Quản trị viên trong hệ thống</p>
             </div>
@@ -48,7 +48,6 @@
                     <span class="item-name">{{ adm.FullName }}</span>
                     <span v-if="adm.UserID === currentAdminId" class="current-tag">Đang đăng nhập</span>
                   </div>
-                  <span class="item-email">{{ adm.Email }}</span>
                 </div>
                 <span v-if="adm.UserID === currentAdminId" class="check-icon">✓</span>
               </div>
@@ -59,7 +58,7 @@
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                Phân quyền Admin
+                Phân quyền ADMIN
               </button>
               <button class="btn-logout-dropdown" @click="handleLogout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

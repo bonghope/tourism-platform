@@ -107,18 +107,19 @@ onMounted(() => {
 }
 .btn-search {
   padding: 14px 40px;
-  background: var(--primary-color);
+  background: var(--primary-gradient, linear-gradient(135deg, #00b99a 0%, #007d68 100%));
   color: white;
   border: none;
   border-radius: 40px;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.25);
 }
 .btn-search:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+  transform: scale(1.04);
+  box-shadow: 0 10px 24px rgba(0, 125, 104, 0.35);
 }
 .dest-grid {
   display: grid;
@@ -132,8 +133,8 @@ onMounted(() => {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(37, 99, 235, 0.2);
-  border-left-color: var(--primary-color);
+  border: 4px solid rgba(0, 185, 154, 0.2);
+  border-left-color: var(--primary-color, #007d68);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;

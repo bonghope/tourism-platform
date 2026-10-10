@@ -176,10 +176,7 @@
                 <span v-else>{{ otpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
               </button>
             </div>
-            <p v-if="!otpSent" class="otp-help-text">
-              Chỉ cần nhập SĐT rồi bấm nút <strong>"Lấy mã"</strong> bên phải để nhận OTP.
-            </p>
-            <p v-else class="otp-help-text otp-success-text">
+            <p v-if="otpSent" class="otp-help-text otp-success-text">
               Mã OTP đã gửi đến SĐT <strong>{{ regForm.phone }}</strong>: <strong>{{ regForm.otp }}</strong>
             </p>
           </div>
@@ -471,10 +468,7 @@
                 <span v-else>{{ googleOtpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
               </button>
             </div>
-            <p v-if="!googleOtpSent" class="otp-help-text">
-              Chỉ cần nhập Gmail rồi bấm nút <strong>"Lấy mã"</strong> bên phải để nhận OTP.
-            </p>
-            <p v-else class="otp-help-text otp-success-text">
+            <p v-if="googleOtpSent" class="otp-help-text otp-success-text">
               Mã OTP đã gửi đến Gmail <strong>{{ googleForm.email }}</strong>: <strong>{{ googleForm.otp }}</strong>
             </p>
           </div>
@@ -1039,7 +1033,7 @@ onUnmounted(() => {
 }
 
 .btn-demo {
-  background: #2563eb;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
   border: none;
   padding: 3px 10px;
@@ -1073,8 +1067,8 @@ onUnmounted(() => {
 
 .tab-btn.active {
   background: #ffffff;
-  color: #2563eb;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: var(--primary-color, #007d68);
+  box-shadow: 0 2px 6px rgba(0, 125, 104, 0.15);
 }
 
 .auth-form {
@@ -1171,9 +1165,13 @@ onUnmounted(() => {
 
 .link-small {
   font-size: 0.78rem;
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
   text-decoration: none;
   font-weight: 600;
+}
+
+.link-small:hover {
+  color: var(--primary-mint, #00b99a);
 }
 
 .form-sub-row {
@@ -1208,8 +1206,8 @@ onUnmounted(() => {
 }
 
 .form-control:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: var(--primary-mint, #00b99a);
+  box-shadow: 0 0 0 3px rgba(0, 185, 154, 0.18);
 }
 
 .input-rounded-lg {
@@ -1236,21 +1234,29 @@ onUnmounted(() => {
   flex: 1;
   height: 48px;
   font-size: 0.95rem;
-  letter-spacing: 2px;
-  font-weight: 600;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-family: inherit;
   box-sizing: border-box;
+}
+
+.otp-input-box::placeholder {
+  letter-spacing: normal;
+  font-weight: 400;
+  font-family: inherit;
 }
 
 .btn-get-otp-action {
   height: 48px;
   min-width: 95px;
   padding: 0 18px;
-  background: #2563eb;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
-  border: 1.5px solid #2563eb;
+  border: 1.5px solid var(--primary-color, #007d68);
   border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: normal;
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -1262,8 +1268,8 @@ onUnmounted(() => {
 }
 
 .btn-get-otp-action:hover:not(:disabled) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--primary-hover, #006050);
+  border-color: var(--primary-hover, #006050);
   transform: translateY(-1px);
 }
 
@@ -1348,7 +1354,7 @@ onUnmounted(() => {
 .btn-submit {
   width: 100%;
   padding: 12px;
-  background: #2563eb;
+  background: var(--primary-gradient, linear-gradient(135deg, #00b99a 0%, #007d68 100%));
   color: #ffffff;
   border: none;
   border-radius: 24px;
@@ -1358,11 +1364,13 @@ onUnmounted(() => {
   margin-top: 8px;
   font-family: inherit;
   transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.25);
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #1d4ed8;
+  opacity: 0.95;
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 125, 104, 0.35);
 }
 
 .btn-submit:disabled {

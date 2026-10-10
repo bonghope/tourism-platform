@@ -320,18 +320,71 @@ const requestGoogleOtp = async (req, res) => {
     }
 };
 
-// --- 4. ĐĂNG NHẬP GOOGLE VỚI TÀI KHOẢN, MẬT KHẨU & OTP ---
+// Hàm xác minh Google idToken trực tiếp với máy chủ OAuth2 của Google
+const verifyGoogleIdToken = async (idToken) => {
+    if (!idToken || typeof idToken !== 'string') {
+        throw new Error('idToken không hợp lệ.');
+    }
+
+    // Giả lập token trong môi trường test nếu cần
+    if (process.env.NODE_ENV === 'test' && idToken.startsWith('mock-google-token')) {
+        return {
+            email: 'test.google@gmail.com',
+            name: 'Google Test User',
+            picture: 'https://lh3.googleusercontent.com/test',
+            sub: 'mock-sub-12345'
+        };
+    }
+
+    try {
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken.trim())}`);
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error_description || errData.error || 'Token Google không hợp lệ hoặc đã hết hạn.');
+        }
+        const payload = await response.json();
+        if (!payload || !payload.email) {
+            throw new Error('Google Token không chứa thông tin email.');
+        }
+
+        // Kiểm tra audience nếu có cấu hình GOOGLE_CLIENT_ID
+        if (process.env.GOOGLE_CLIENT_ID && payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+            throw new Error('Google Client ID (aud) không khớp với ứng dụng.');
+        }
+
+        return payload;
+    } catch (err) {
+        throw new Error(`Xác thực Google idToken thất bại: ${err.message}`);
+    }
+};
+
+// --- 4. ĐĂNG NHẬP GOOGLE VỚI TÀI KHOẢN, MẬT KHẨU & OTP HOẶC ID_TOKEN ---
 const googleLogin = async (req, res) => {
     try {
         let { email, password, otp, fullName, avatarUrl, idToken } = req.body;
+        let cleanEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-        if (!email || !email.trim()) {
-            return res.status(400).json({ success: false, message: "Vui lòng nhập tài khoản Gmail." });
-        }
-        const cleanEmail = email.trim().toLowerCase();
+        // 1. Nếu client gửi idToken: Bắt buộc xác thực trực tiếp với máy chủ Google
+        if (idToken) {
+            let googlePayload;
+            try {
+                googlePayload = await verifyGoogleIdToken(idToken);
+            } catch (verifyErr) {
+                return res.status(401).json({ 
+                    success: false, 
+                    message: verifyErr.message || "Google ID Token không hợp lệ hoặc không thể xác thực với Google." 
+                });
+            }
 
-        // Kiểm tra OTP nếu người dùng dùng luồng OTP Gmail
-        if (otp) {
+            // Sử dụng email chính chủ từ Google Token đã xác thực
+            cleanEmail = googlePayload.email.trim().toLowerCase();
+            if (googlePayload.name && !fullName) fullName = googlePayload.name;
+            if (googlePayload.picture && !avatarUrl) avatarUrl = googlePayload.picture;
+        } else if (otp) {
+            // 2. Nếu đăng nhập bằng OTP Gmail
+            if (!cleanEmail) {
+                return res.status(400).json({ success: false, message: "Vui lòng nhập tài khoản Gmail." });
+            }
             const stored = otpStore.get('GOOGLE_OTP_' + cleanEmail);
             if (!stored) {
                 return res.status(400).json({ success: false, message: "Không tìm thấy yêu cầu OTP hoặc mã đã hết hạn. Vui lòng bấm Lấy mã." });
@@ -344,8 +397,8 @@ const googleLogin = async (req, res) => {
                 return res.status(400).json({ success: false, message: "Mã OTP không chính xác!" });
             }
             otpStore.delete('GOOGLE_OTP_' + cleanEmail);
-        } else if (!idToken) {
-            return res.status(400).json({ success: false, message: "Vui lòng nhập mã OTP để xác thực đăng nhập Google." });
+        } else {
+            return res.status(400).json({ success: false, message: "Vui lòng cung cấp Google idToken hoặc mã OTP để xác thực đăng nhập Google." });
         }
 
         // Kiểm tra xem User đã có trong DB chưa
@@ -358,7 +411,7 @@ const googleLogin = async (req, res) => {
             await pool.query(
                 `INSERT INTO Users (UserID, Email, FullName, AvatarURL, Role, AuthProvider, Status) 
                  VALUES (?, ?, ?, ?, 'USER', 'GOOGLE', 'ACTIVE')`,
-                [userId, email, fullName || 'Khách Google', avatarUrl || null]
+                [userId, cleanEmail, fullName || 'Khách Google', avatarUrl || null]
             );
             const [newUsers] = await pool.query('SELECT * FROM Users WHERE UserID = ?', [userId]);
             user = newUsers[0];
@@ -618,5 +671,6 @@ module.exports = {
     forgotPassword,
     resetPassword,
     getAdminList,
-    getAdminToken
+    getAdminToken,
+    verifyGoogleIdToken
 };

@@ -142,23 +142,23 @@
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: rgba(249, 115, 22, 0.1);
-  border: 1px solid rgba(249, 115, 22, 0.25);
+  background: var(--primary-light, #e6f7f2);
+  border: 1px solid rgba(0, 185, 154, 0.3);
   border-radius: 999px;
   width: fit-content;
 }
 .pill-dot {
   width: 8px;
   height: 8px;
-  background-color: #f97316;
+  background-color: var(--primary-mint, #00b99a);
   border-radius: 50%;
-  box-shadow: 0 0 8px #f97316;
+  box-shadow: 0 0 10px rgba(0, 185, 154, 0.6);
 }
 .pill-text {
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.8px;
-  color: #ea580c;
+  color: var(--primary-color, #007d68);
   text-transform: uppercase;
 }
 
@@ -175,7 +175,7 @@
   font-size: 1.95rem;
   line-height: 1.35;
   font-weight: 800;
-  color: #85370d; /* Màu nâu đất vàng hoàng kim sang trọng như hình mẫu 3 */
+  color: #0f2c27; /* Xanh ngọc bích đậm sang trọng, đồng bộ thương hiệu */
   letter-spacing: -0.4px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -227,7 +227,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  background: var(--primary-gradient, linear-gradient(135deg, #00b99a 0%, #007d68 100%));
   color: #ffffff;
   padding: 14px 28px;
   border-radius: 999px;
@@ -235,13 +235,13 @@
   font-weight: 800;
   letter-spacing: 0.5px;
   text-decoration: none;
-  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
+  box-shadow: 0 8px 22px rgba(0, 125, 104, 0.35);
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .btn-orange-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(234, 88, 12, 0.45);
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+  box-shadow: 0 12px 28px rgba(0, 125, 104, 0.45);
+  background: linear-gradient(135deg, #00cca9 0%, #006050 100%);
 }
 .cta-arrow {
   transition: transform 0.3s ease;
@@ -260,8 +260,8 @@
   transition: all 0.25s ease;
 }
 .btn-secondary-link:hover {
-  color: #ea580c;
-  background: rgba(249, 115, 22, 0.08);
+  color: var(--primary-color, #007d68);
+  background: var(--primary-light, #e6f7f2);
 }
 
 /* CỘT PHẢI: 3 BỨC ẢNH XẾP NGHỆ THUẬT (STACKED CARDS) */
@@ -325,10 +325,11 @@
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  background: rgba(249, 115, 22, 0.9);
+  background: var(--primary-gradient, linear-gradient(135deg, #00b99a 0%, #007d68 100%));
   padding: 2px 8px;
   border-radius: 6px;
   margin-bottom: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 .card-caption {
   font-size: 0.85rem;
@@ -389,8 +390,8 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
-  border: 3px solid #ffedd5;
+  box-shadow: 0 12px 28px rgba(0, 125, 104, 0.2);
+  border: 3px solid var(--primary-light, #e6f7f2);
   transform: rotate(12deg);
   animation: floatBadge 4s ease-in-out infinite;
 }
@@ -403,7 +404,7 @@
 .badge-script {
   font-family: 'Brush Script MT', 'Segoe Script', cursive, sans-serif;
   font-size: 1.15rem;
-  color: #f97316;
+  color: var(--primary-color, #007d68);
   font-weight: 700;
   line-height: 1;
 }
@@ -411,7 +412,7 @@
   font-size: 0.52rem;
   font-weight: 900;
   letter-spacing: 0.5px;
-  color: #0d9488;
+  color: var(--primary-mint, #00b99a);
   margin-top: 4px;
 }
 

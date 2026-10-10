@@ -911,14 +911,14 @@ onUnmounted(() => {
 
 .avatar-container:hover {
   transform: scale(1.03);
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
-  border-color: #93c5fd;
+  box-shadow: 0 12px 28px rgba(0, 125, 104, 0.25);
+  border-color: var(--primary-mint, #00b99a);
 }
 
 .avatar-dropzone-active {
-  border-color: #2563eb !important;
+  border-color: var(--primary-color, #007d68) !important;
   transform: scale(1.08) !important;
-  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.3) !important;
+  box-shadow: 0 0 0 6px rgba(0, 185, 154, 0.3) !important;
 }
 
 .avatar-image {
@@ -985,7 +985,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 0.88rem;
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
   font-weight: 600;
   margin-top: 6px;
 }
@@ -1036,7 +1036,7 @@ onUnmounted(() => {
 }
 
 .highlight-phone {
-  color: #2563eb;
+  color: var(--primary-color, #007d68);
   font-weight: 700;
 }
 
@@ -1095,8 +1095,8 @@ onUnmounted(() => {
 }
 
 .form-control:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: var(--primary-mint, #00b99a);
+  box-shadow: 0 0 0 3px rgba(0, 185, 154, 0.18);
 }
 
 /* SỐ ĐIỆN THOẠI & NÚT THAY ĐỔI */
@@ -1118,9 +1118,9 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
+  border: 1px solid rgba(0, 185, 154, 0.3);
   border-radius: 12px;
   padding: 10px 16px;
   font-size: 0.85rem;
@@ -1132,9 +1132,9 @@ onUnmounted(() => {
 }
 
 .btn-change-phone-action:hover {
-  background: #2563eb;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
-  border-color: #2563eb;
+  border-color: var(--primary-color, #007d68);
   transform: translateY(-1px);
 }
 
@@ -1172,7 +1172,7 @@ onUnmounted(() => {
 
 .btn-primary {
   padding: 11px 24px;
-  background: #2563eb;
+  background: var(--primary-gradient, linear-gradient(135deg, #00b99a 0%, #007d68 100%));
   color: #ffffff;
   border: none;
   border-radius: 20px;
@@ -1181,11 +1181,13 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  opacity: 0.95;
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 125, 104, 0.35);
 }
 
 .btn-secondary {
@@ -1287,9 +1289,9 @@ onUnmounted(() => {
 
 .btn-get-otp-inline {
   padding: 0 18px;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1.5px solid #bfdbfe;
+  background: var(--primary-light, #e6f7f2);
+  color: var(--primary-color, #007d68);
+  border: 1.5px solid rgba(0, 185, 154, 0.3);
   border-radius: 12px;
   font-size: 0.88rem;
   font-weight: 700;
@@ -1300,7 +1302,7 @@ onUnmounted(() => {
 }
 
 .btn-get-otp-inline:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
 }
 
@@ -1485,9 +1487,9 @@ onUnmounted(() => {
 }
 
 .btn-corner:hover {
-  background: #2563eb;
+  background: var(--primary-color, #007d68);
   color: #ffffff;
-  border-color: #2563eb;
+  border-color: var(--primary-color, #007d68);
 }
 
 .zoom-slider-row {
@@ -1501,7 +1503,7 @@ onUnmounted(() => {
 
 .zoom-range {
   flex: 1;
-  accent-color: #2563eb;
+  accent-color: var(--primary-color, #007d68);
   cursor: pointer;
 }
 
