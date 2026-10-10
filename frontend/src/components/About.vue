@@ -118,6 +118,12 @@ onMounted(() => {
 .about-page {
   width: 100%;
   padding-bottom: 80px;
+  background: var(--page-background);
+}
+.about-page .glass-panel {
+  background: #ffffff;
+  border: 1px solid #e0eae4;
+  box-shadow: 0 12px 32px rgba(24, 61, 53, 0.08);
 }
 
 /* Hero Section */
@@ -177,7 +183,7 @@ onMounted(() => {
   text-align: justify;
 }
 .intro-text strong {
-  color: var(--primary-color);
+  color: #007d68;
   font-weight: 800;
 }
 
@@ -191,7 +197,7 @@ onMounted(() => {
 .divider {
   width: 60px;
   height: 4px;
-  background: var(--primary-color);
+  background: #007d68;
   border-radius: 2px;
   margin-bottom: 24px;
 }
@@ -332,7 +338,6 @@ onMounted(() => {
   margin: 80px auto 0;
   padding: 60px 40px;
   text-align: center;
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.05) 0%, rgba(37, 99, 235, 0.1) 100%);
 }
 .conclusion-section h2 {
   font-size: 2rem;
@@ -347,7 +352,7 @@ onMounted(() => {
 }
 .btn-primary {
   padding: 14px 40px;
-  background: var(--primary-color);
+  background: #007d68;
   color: white;
   border: none;
   border-radius: 30px;
@@ -358,8 +363,10 @@ onMounted(() => {
 }
 .btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+  background: #006653;
+  box-shadow: 0 10px 20px rgba(0, 125, 104, 0.24);
 }
+.btn-primary:focus-visible { outline: 3px solid #00b99a; outline-offset: 4px; }
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(30px); }

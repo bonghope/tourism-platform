@@ -27,17 +27,6 @@
           </ul>
         </div>
 
-        <!-- Services -->
-        <div class="footer-col">
-          <h3 class="col-title">Dịch vụ</h3>
-          <ul class="footer-links">
-            <li><a href="#" @click.prevent="alertDev">Tour Cao Cấp</a></li>
-            <li><a href="#" @click.prevent="alertDev">Khách Sạn & Resort</a></li>
-            <li><a href="#" @click.prevent="alertDev">Vé Máy Bay</a></li>
-            <li><a href="#" @click.prevent="alertDev">Combo Khuyến Mãi</a></li>
-          </ul>
-        </div>
-
         <!-- Contact Info -->
         <div class="footer-col contact-col">
           <h3 class="col-title">Liên hệ</h3>
@@ -62,12 +51,6 @@
   </footer>
 </template>
 
-<script setup>
-const alertDev = () => {
-  alert('Tính năng này thuộc các Module đang được phát triển (WIP).');
-};
-</script>
-
 <style scoped>
 .footer {
   background: var(--secondary-color);
@@ -82,7 +65,7 @@ const alertDev = () => {
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  grid-template-columns: 2fr 1fr 1.5fr;
   gap: 40px;
   margin-bottom: 60px;
 }
@@ -159,6 +142,9 @@ const alertDev = () => {
 @media (max-width: 992px) {
   .footer-grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .brand-col {
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 576px) {
