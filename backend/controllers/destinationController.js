@@ -1,6 +1,18 @@
 const pool = require('../config/database');
 
 class DestinationController {
+    // GET /api/destinations
+    static async getAll(req, res, next) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT DestinationID, Name, Slug, Description, Keywords, ImageURL, Status FROM Destinations WHERE Status = 'PUBLISHED' ORDER BY Name ASC`
+            );
+            res.status(200).json({ success: true, total: rows.length, data: rows });
+        } catch (error) {
+            next(error);
+        }
+    }
+
     // GET /api/destinations/search?keyword=...
     static async search(req, res, next) {
         try {

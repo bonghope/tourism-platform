@@ -398,11 +398,16 @@ class AdminApiService {
   // 2. Quản lý Điểm đến
   async getDestinations() {
     try {
-      const res = await fetch(`${API_BASE_URL}/destinations`);
+      const res = await this.authFetch(`${API_BASE_URL}/admin/destinations`);
       const data = await res.json();
-      if (data.success) return data;
-      throw new Error();
+      if (data.success && Array.isArray(data.data)) return data;
+      throw new Error(data.message || 'Error fetching destinations');
     } catch (e) {
+      try {
+        const res2 = await fetch(`${API_BASE_URL}/destinations`);
+        const data2 = await res2.json();
+        if (data2.success && Array.isArray(data2.data)) return data2;
+      } catch (err) {}
       return { success: true, data: mockDb.destinations };
     }
   }

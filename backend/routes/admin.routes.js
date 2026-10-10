@@ -12,6 +12,7 @@ router.put('/users/:targetUserId/unban', adminController.unbanUser);
 router.put('/users/:targetUserId/role', adminController.updateUserRole); // Đổi vai trò (ADMIN / USER)
 
 // 2. Destinations
+router.get('/destinations', adminController.getAllDestinations); // Danh sách toàn bộ địa danh
 router.post('/destinations', adminController.createDestination);
 router.put('/destinations/:destinationId', adminController.updateDestination); // Cập nhật
 router.patch('/destinations/:destinationId/status', adminController.toggleDestinationStatus); // Ẩn / Hiện

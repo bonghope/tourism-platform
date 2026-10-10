@@ -38,6 +38,18 @@ const unbanUser = async (req, res) => {
 // ==========================================
 // 2. QUẢN LÝ ĐỊA DANH (DESTINATIONS)
 // ==========================================
+const getAllDestinations = async (req, res) => {
+    try {
+        const [destinations] = await pool.query(
+            'SELECT DestinationID, Name, Slug, Description, Keywords, ImageURL, Status, CreatedAt FROM Destinations ORDER BY CreatedAt DESC'
+        );
+        return res.status(200).json({ success: true, total: destinations.length, data: destinations });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách điểm đến cho admin:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy danh sách điểm đến." });
+    }
+};
+
 const createDestination = async (req, res) => {
     try {
         const { name, slug, description, keywords, imageUrl } = req.body;
@@ -415,6 +427,7 @@ module.exports = {
     unbanUser,
     getAllUsers,
     updateUserRole,
+    getAllDestinations,
     createDestination,
     updateDestination,
     toggleDestinationStatus,
