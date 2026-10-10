@@ -105,30 +105,32 @@
     </div>
 
     <!-- MODAL TRẢ LỜI ĐÁNH GIÁ -->
-    <div v-if="reviewToReply" class="modal-overlay">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Phản hồi đánh giá</h3>
-          <button class="modal-close" @click="reviewToReply = null">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="quote-text">
-            <strong>{{ reviewToReply.ReviewerName }}:</strong> "{{ reviewToReply.Content }}"
+    <Teleport to="body">
+      <div v-if="reviewToReply" class="modal-overlay" @click.self="reviewToReply = null">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Phản hồi đánh giá</h3>
+            <button class="modal-close" @click="reviewToReply = null">✕</button>
           </div>
+          <div class="modal-body">
+            <div class="quote-text">
+              <strong>{{ reviewToReply.ReviewerName }}:</strong> "{{ reviewToReply.Content }}"
+            </div>
 
-          <div class="form-group" style="margin-top: 14px;">
-            <label class="form-label">Nội dung phản hồi chính thức của Quản trị viên</label>
-            <textarea v-model="replyText" rows="4" class="form-textarea" placeholder="Nhập câu trả lời..."></textarea>
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label">Nội dung phản hồi chính thức của Quản trị viên</label>
+              <textarea v-model="replyText" rows="4" class="form-textarea" placeholder="Nhập câu trả lời..."></textarea>
+            </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="reviewToReply = null">Hủy</button>
-          <button class="btn btn-primary" @click="submitReply" :disabled="replyLoading || !replyText">
-            Gửi phản hồi
-          </button>
+          <div class="modal-footer">
+            <button class="btn btn-outline" @click="reviewToReply = null">Hủy</button>
+            <button class="btn btn-primary" @click="submitReply" :disabled="replyLoading || !replyText">
+              Gửi phản hồi
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

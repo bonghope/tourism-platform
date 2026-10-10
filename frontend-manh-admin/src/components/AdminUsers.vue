@@ -161,28 +161,30 @@
     </div>
 
     <!-- MODAL KHÓA TÀI KHOẢN -->
-    <div v-if="userToBan" class="modal-overlay">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Xác nhận khóa tài khoản</h3>
-          <button class="modal-close" @click="userToBan = null">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Bạn có chắc chắn muốn khóa tài khoản của <strong>{{ userToBan.FullName }}</strong> ({{ userToBan.Email }})?
-          </p>
-          <div class="warning-box">
-            Lưu ý: Sau khi khóa, toàn bộ phiên đăng nhập (Refresh Tokens) của tài khoản này sẽ bị thu hồi và không thể đăng nhập vào hệ thống.
+    <Teleport to="body">
+      <div v-if="userToBan" class="modal-overlay" @click.self="userToBan = null">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Xác nhận khóa tài khoản</h3>
+            <button class="modal-close" @click="userToBan = null">✕</button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Bạn có chắc chắn muốn khóa tài khoản của <strong>{{ userToBan.FullName }}</strong> ({{ userToBan.Email }})?
+            </p>
+            <div class="warning-box">
+              Lưu ý: Sau khi khóa, toàn bộ phiên đăng nhập (Refresh Tokens) của tài khoản này sẽ bị thu hồi và không thể đăng nhập vào hệ thống.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-outline" @click="userToBan = null">Hủy</button>
+            <button class="btn btn-danger" @click="confirmBan" :disabled="actionLoading">
+              {{ actionLoading ? 'Đang xử lý...' : 'Đồng ý khóa' }}
+            </button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="userToBan = null">Hủy</button>
-          <button class="btn btn-danger" @click="confirmBan" :disabled="actionLoading">
-            {{ actionLoading ? 'Đang xử lý...' : 'Đồng ý khóa' }}
-          </button>
-        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

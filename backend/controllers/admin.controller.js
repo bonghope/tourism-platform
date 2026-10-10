@@ -39,6 +39,18 @@ const unbanUser = async (req, res) => {
 // ==========================================
 // 2. QUẢN LÝ ĐỊA DANH (DESTINATIONS)
 // ==========================================
+const getAllDestinations = async (req, res) => {
+    try {
+        const [destinations] = await pool.query(
+            'SELECT DestinationID, Name, Slug, Description, Keywords, ImageURL, Status, CreatedAt FROM Destinations ORDER BY CreatedAt DESC'
+        );
+        return res.status(200).json({ success: true, total: destinations.length, data: destinations });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách điểm đến cho admin:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy danh sách điểm đến." });
+    }
+};
+
 const createDestination = async (req, res) => {
     try {
         const { name, slug, description, keywords, imageUrl } = req.body;
@@ -79,17 +91,21 @@ const toggleDestinationStatus = async (req, res) => {
 // ==========================================
 const createTour = async (req, res) => {
     try {
-        const { title, slug, price, startDate, duration, maxSlots, destinationId, itinerary } = req.body;
-        if (price <= 0) return res.status(400).json({ success: false, message: "Giá tiền phải > 0" });
+        const { title, slug, price, originalPrice, discountPercent, startDate, duration, maxSlots, destinationId, itinerary } = req.body;
+        if (!price && !originalPrice) return res.status(400).json({ success: false, message: "Giá tiền phải > 0" });
 
         const tourId = crypto.randomUUID();
         const itineraryJson = itinerary ? (typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary)) : null;
 
+        const disc = Number(discountPercent) || 0;
+        const origPrice = disc > 0 ? (Number(originalPrice) || Number(price)) : null;
+        const finalPrice = Number(price) > 0 ? Number(price) : (origPrice ? Math.round(origPrice * (1 - disc / 100)) : 0);
+
         // Tạo Tour mới (Mặc định Status = DRAFT, AvailableSlots = maxSlots)
         await pool.query(
-            `INSERT INTO Tours (TourID, Title, Slug, Price, StartDate, Duration, MaxSlots, AvailableSlots, Itinerary, Status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT')`,
-            [tourId, title, slug, price, startDate, duration, maxSlots, maxSlots, itineraryJson]
+            `INSERT INTO Tours (TourID, Title, Slug, Price, OriginalPrice, DiscountPercent, StartDate, Duration, MaxSlots, AvailableSlots, Itinerary, Status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT')`,
+            [tourId, title, slug, finalPrice, origPrice, disc, startDate, duration, maxSlots, maxSlots, itineraryJson]
         );
 
         // Nối Tour với Địa danh (Bảng trung gian)
@@ -244,7 +260,7 @@ const updateTour = async (req, res) => {
     let connection;
     try {
         const { tourId } = req.params;
-        const { title, slug, price, startDate, duration, maxSlots, status, itinerary } = req.body;
+        const { title, slug, price, originalPrice, discountPercent, destinationId, startDate, duration, maxSlots, status, itinerary } = req.body;
         if (maxSlots !== undefined && (!Number.isInteger(Number(maxSlots)) || Number(maxSlots) < 1)) throw new Error('Sức chứa phải là số nguyên dương.');
         if (price !== undefined && (!Number.isFinite(Number(price)) || Number(price) <= 0)) throw new Error('Giá tiền phải lớn hơn 0.');
         if (status && !['DRAFT','PUBLISHED','HIDDEN'].includes(status)) throw new Error('Trạng thái tour không hợp lệ.');
@@ -260,12 +276,39 @@ const updateTour = async (req, res) => {
             'UPDATE Tours SET Title = COALESCE(?, Title), Slug = COALESCE(?, Slug), Price = COALESCE(?, Price), StartDate = COALESCE(?, StartDate), Duration = COALESCE(?, Duration), MaxSlots = COALESCE(?, MaxSlots), AvailableSlots = ?, Status = COALESCE(?, Status), Itinerary = COALESCE(?, Itinerary) WHERE TourID = ?',
             [title ?? null, slug ?? null, price ?? null, startDate ?? null, duration ?? null, maxSlots ?? null, slots, status ?? null, itineraryJson, tourId]
         );
+        if (originalPrice !== undefined || discountPercent !== undefined) {
+            if (discountPercent !== undefined && (!Number.isFinite(Number(discountPercent)) || Number(discountPercent) < 0 || Number(discountPercent) >= 100)) throw new Error('Invalid discount percentage');
+            await connection.query('UPDATE Tours SET OriginalPrice = ?, DiscountPercent = COALESCE(?, DiscountPercent) WHERE TourID = ?', [originalPrice ?? null, discountPercent ?? null, tourId]);
+        }
+        if (destinationId !== undefined) {
+            await connection.query('DELETE FROM Tour_Destinations WHERE TourID = ?', [tourId]);
+            if (destinationId) await connection.query('INSERT INTO Tour_Destinations (TourID, DestinationID) VALUES (?, ?)', [tourId, destinationId]);
+        }
         await connection.commit();
         return res.status(200).json({ success:true, message:'Cập nhật tour thành công!' });
     } catch (error) {
         if (connection) await connection.rollback();
         return res.status(400).json({ success:false, message:error.message });
     } finally { if (connection) connection.release(); }
+};
+
+const getAllTours = async (req, res) => {
+    try {
+        const query = `
+            SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.DiscountPercent,
+                   t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, t.Status,
+                   t.AverageRating, t.ReviewCount, t.Itinerary,
+                   td.DestinationID
+            FROM Tours t
+            LEFT JOIN Tour_Destinations td ON t.TourID = td.TourID
+            ORDER BY t.StartDate DESC
+        `;
+        const [rows] = await pool.query(query);
+        return res.status(200).json({ success: true, total: rows.length, data: rows });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách Tour cho admin:", error);
+        return res.status(500).json({ success: false, message: "Lỗi khi lấy danh sách Tour." });
+    }
 };
 
 const updateTourStatus = async (req, res) => {
@@ -391,10 +434,12 @@ module.exports = {
     unbanUser,
     getAllUsers,
     updateUserRole,
+    getAllDestinations,
     createDestination,
     updateDestination,
     toggleDestinationStatus,
     createTour,
+    getAllTours,
     updateTour,
     updateTourStatus,
     softDeleteTour,

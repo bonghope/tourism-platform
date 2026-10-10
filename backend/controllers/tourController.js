@@ -8,7 +8,7 @@ class TourController {
             const { page = 1, limit = 10, destinationId, keyword, minPrice, maxPrice, startDate, endDate } = req.query;
             const userId = req.user ? req.user.userId : null;
 
-            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, ${ratingColumns()}`;
+            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.DiscountPercent, t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t`;
             if (destinationId) {
                 fromClause += ` INNER JOIN Tour_Destinations td ON t.TourID = td.TourID`;

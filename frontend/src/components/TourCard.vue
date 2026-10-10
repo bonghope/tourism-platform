@@ -12,9 +12,13 @@
           <h3 class="title">{{ tour.Title }}</h3>
           <div class="meta">
             <span class="rating">{{ Number(tour.ReviewCount) > 0 ? '⭐ ' + Number(tour.AverageRating).toFixed(1) + ' (' + tour.ReviewCount + ' đánh giá)' : 'Chưa có đánh giá' }}</span>
-            <span class="price">{{ formatPrice(tour.Price) }}</span>
+            <div v-if="Number(tour.OriginalPrice) > Number(tour.Price)" class="price-stack"><span class="old-price">{{ formatPrice(tour.OriginalPrice) }}</span><span class="price">{{ formatPrice(tour.Price) }}</span></div>
+            <span v-else class="price">{{ formatPrice(tour.Price) }}</span>
           </div>
         </div>
+      </div>
+      <div v-if="tour.DiscountPercent > 0" class="card-discount-badge">
+        -{{ tour.DiscountPercent }}%
       </div>
       <button class="btn-favorite" @click.stop="toggleFavorite">
         <svg xmlns="http://www.w3.org/2000/svg" :fill="isFavorite ? '#ef4444' : 'none'" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-heart">
@@ -180,10 +184,36 @@ const formatPrice = (price) => {
   align-items: center;
   gap: 4px;
 }
+.price-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.old-price {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: line-through;
+  color: rgba(255, 255, 255, 0.7);
+}
 .price {
   font-size: 1.1rem;
   font-weight: 800;
   color: #fbbf24; /* Vàng kim */
+}
+.card-discount-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+  letter-spacing: -0.02em;
+  z-index: 10;
 }
 .btn-favorite {
   position: absolute;

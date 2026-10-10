@@ -44,7 +44,14 @@
           <div class="booking-card">
             <div class="price-section">
               <span class="price-label">Giá trọn gói:</span>
-              <span class="price-value">{{ formatPrice(tour.Price) }}</span>
+              <div v-if="tour.DiscountPercent > 0 || (tour.OriginalPrice && Number(tour.OriginalPrice) > Number(tour.Price))" class="detail-price-stack">
+                <div class="detail-old-row">
+                  <span class="detail-old-price">{{ formatPrice(tour.OriginalPrice || tour.Price) }}</span>
+                  <span class="detail-discount-badge">-{{ tour.DiscountPercent || Math.round((1 - tour.Price / tour.OriginalPrice) * 100) }}%</span>
+                </div>
+                <span class="price-value">{{ formatPrice(tour.Price) }}</span>
+              </div>
+              <span v-else class="price-value">{{ formatPrice(tour.Price) }}</span>
             </div>
             <div class="slots-info">
               <span>Khởi hành: <strong>{{ formatDate(tour.StartDate) }}</strong></span>
@@ -244,6 +251,30 @@ onMounted(() => {
   display: block;
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+.detail-price-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-old-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-old-price {
+  font-size: 1.15rem;
+  font-weight: 500;
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.detail-discount-badge {
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 .price-value {
   font-size: 2.2rem;

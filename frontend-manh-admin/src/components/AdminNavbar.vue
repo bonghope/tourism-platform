@@ -32,7 +32,7 @@
                 <span class="header-label">DANH SÁCH QUẢN TRỊ VIÊN</span>
                 <span class="header-count">{{ adminList.length }} Admin</span>
               </div>
-              <p class="header-sub">Hệ thống hỗ trợ nhiều Admin - Nhấp chọn để chuyển đổi</p>
+              <p class="header-sub">Danh sách tài khoản Quản trị viên trong hệ thống</p>
             </div>
 
             <div class="dropdown-list">
@@ -40,13 +40,12 @@
                 v-for="adm in adminList" 
                 :key="adm.UserID"
                 :class="['admin-item', adm.UserID === currentAdminId ? 'active' : '']"
-                @click="selectAdmin(adm)"
               >
                 <img :src="adm.AvatarURL || defaultAvatar" class="item-avatar" alt="Admin" />
                 <div class="item-info">
                   <div class="item-name-wrap">
                     <span class="item-name">{{ adm.FullName }}</span>
-                    <span v-if="adm.UserID === currentAdminId" class="current-tag">Đang chọn</span>
+                    <span v-if="adm.UserID === currentAdminId" class="current-tag">Đang đăng nhập</span>
                   </div>
                   <span class="item-email">{{ adm.Email }}</span>
                 </div>
@@ -59,7 +58,7 @@
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                Phân quyền thêm Admin (Tab Người dùng)
+                Phân quyền Admin
               </button>
               <button class="btn-logout-dropdown" @click="handleLogout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -135,20 +134,6 @@ const initCurrentAdmin = async () => {
   } else if (adminList.value.length > 0) {
     currentAdmin.value = adminList.value[0];
   }
-};
-
-const selectAdmin = async (adm) => {
-  if (adm.UserID === currentAdminId.value) {
-    isOpen.value = false;
-    return;
-  }
-  const updated = await adminApi.switchAdmin(adm.UserID);
-  if (updated) {
-    currentAdmin.value = updated;
-    emit('admin-switched', updated);
-    window.dispatchEvent(new CustomEvent('admin-changed', { detail: updated }));
-  }
-  isOpen.value = false;
 };
 
 const goToUsersTab = () => {
@@ -375,12 +360,8 @@ onUnmounted(() => {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 10px;
-  cursor: pointer;
+  cursor: default;
   transition: background 0.15s ease;
-}
-
-.admin-item:hover {
-  background: #f8fafc;
 }
 
 .admin-item.active {

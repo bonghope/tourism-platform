@@ -106,31 +106,33 @@
     </div>
 
     <!-- MODAL HỦY ĐƠN KHẨN CẤP -->
-    <div v-if="bookingToCancel" class="modal-overlay">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Hủy đơn hàng khẩn cấp</h3>
-          <button class="modal-close" @click="bookingToCancel = null">✕</button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Bạn có chắc chắn muốn hủy đơn hàng <strong>#{{ bookingToCancel.BookingID }}</strong> của khách hàng <strong>{{ bookingToCancel.CustomerName }}</strong>?
-          </p>
-          <div class="detail-summary">
-            <div>Chuyến đi: <strong>{{ bookingToCancel.TourTitle }}</strong></div>
-            <div>Số chỗ hoàn trả vào Tour: <strong style="color: #10b981;">+{{ bookingToCancel.PassengerCount }} chỗ</strong></div>
-            <div>Số tiền hoàn lại: <strong style="color: #2563eb;">{{ formatMoney(bookingToCancel.TotalPrice) }}</strong></div>
+    <Teleport to="body">
+      <div v-if="bookingToCancel" class="modal-overlay" @click.self="bookingToCancel = null">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Hủy đơn hàng khẩn cấp</h3>
+            <button class="modal-close" @click="bookingToCancel = null">✕</button>
           </div>
-          <div class="warning-box">
-            Cơ chế bảo đảm an toàn giao dịch: Backend sẽ khóa dòng dữ liệu (Row-level lock), cập nhật trạng thái đơn sang REFUNDING và tự động hoàn trả số lượng vé trống (AvailableSlots) cho Tour.
+          <div class="modal-body">
+            <p>
+              Bạn có chắc chắn muốn hủy đơn hàng <strong>#{{ bookingToCancel.BookingID }}</strong> của khách hàng <strong>{{ bookingToCancel.CustomerName }}</strong>?
+            </p>
+            <div class="detail-summary">
+              <div>Chuyến đi: <strong>{{ bookingToCancel.TourTitle }}</strong></div>
+              <div>Số chỗ hoàn trả vào Tour: <strong style="color: #10b981;">+{{ bookingToCancel.PassengerCount }} chỗ</strong></div>
+              <div>Số tiền hoàn lại: <strong style="color: #2563eb;">{{ formatMoney(bookingToCancel.TotalPrice) }}</strong></div>
+            </div>
+            <div class="warning-box">
+              Cơ chế bảo đảm an toàn giao dịch: Backend sẽ khóa dòng dữ liệu (Row-level lock), cập nhật trạng thái đơn sang REFUNDING và tự động hoàn trả số lượng vé trống (AvailableSlots) cho Tour.
+            </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="bookingToCancel = null">Đóng</button>
-          <button class="btn btn-danger" @click="confirmCancelBooking">Xác nhận hủy đơn</button>
+          <div class="modal-footer">
+            <button class="btn btn-outline" @click="bookingToCancel = null">Đóng</button>
+            <button class="btn btn-danger" @click="confirmCancelBooking">Xác nhận hủy đơn</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 

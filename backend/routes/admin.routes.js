@@ -12,11 +12,13 @@ router.put('/users/:targetUserId/unban', adminController.unbanUser);
 router.put('/users/:targetUserId/role', adminController.updateUserRole); // Đổi vai trò (ADMIN / USER)
 
 // 2. Destinations
+router.get('/destinations', adminController.getAllDestinations); // Danh sách toàn bộ địa danh
 router.post('/destinations', adminController.createDestination);
 router.put('/destinations/:destinationId', adminController.updateDestination); // Cập nhật
 router.patch('/destinations/:destinationId/status', adminController.toggleDestinationStatus); // Ẩn / Hiện
 
 // 3. Tours
+router.get('/tours', adminController.getAllTours); // Lấy toàn bộ Tour (Kèm giá gốc, khuyến mãi, draft/published/hidden)
 router.post('/tours', adminController.createTour);
 router.put('/tours/:tourId', adminController.updateTour); // Cập nhật thông tin & Lộ trình
 router.patch('/tours/:tourId/status', adminController.updateTourStatus); // Đổi trạng thái (DRAFT / PUBLISHED / HIDDEN)
