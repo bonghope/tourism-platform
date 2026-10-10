@@ -47,7 +47,12 @@
           <tr v-for="d in destinations" :key="d.DestinationID">
             <td>
               <div class="dest-info-cell">
-                <img :src="d.ImageURL || defaultDestImg" class="dest-thumb" alt="Thumb" />
+                <img 
+                  :src="d.ImageURL || defaultDestImg" 
+                  class="dest-thumb" 
+                  alt="Thumb" 
+                  @error="onImgError($event)"
+                />
                 <div>
                   <div class="dest-name">{{ d.Name }}</div>
                   <div class="dest-id font-mono">{{ d.DestinationID }}</div>
@@ -107,7 +112,10 @@
 
             <div class="form-group">
               <label class="form-label">Đường dẫn hình ảnh (URL)</label>
-              <input v-model="formData.imageUrl" type="url" class="form-control" placeholder="https://..." />
+              <input v-model="formData.imageUrl" type="url" class="form-control" placeholder="https://images.unsplash.com/..." />
+              <div v-if="formData.imageUrl" class="img-preview-box">
+                <img :src="formData.imageUrl" @error="$event.target.style.display='none'" class="preview-img" alt="Preview" />
+              </div>
             </div>
 
             <div class="form-group">
@@ -138,6 +146,12 @@ import { ref, onMounted } from 'vue';
 import adminApi from '../services/api';
 
 const defaultDestImg = 'https://images.unsplash.com/photo-1528127269322-539801943592?w=800';
+
+const onImgError = (e) => {
+  if (e && e.target) {
+    e.target.src = defaultDestImg;
+  }
+};
 
 const destinations = ref([]);
 const loading = ref(false);
@@ -331,6 +345,20 @@ onMounted(() => {
   height: 48px;
   border-radius: 8px;
   object-fit: cover;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.img-preview-box {
+  margin-top: 8px;
+}
+
+.preview-img {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
 .dest-name {
