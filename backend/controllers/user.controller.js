@@ -85,10 +85,10 @@ const getWishlist = async (req, res) => {
     try {
         const userId = req.user.userId;
         const query = `
-            SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, t.StartDate, t.AvailableSlots, ${ratingColumns()}, f.SavedAt
+            SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, t.AvailableSlots, ${ratingColumns()}, f.SavedAt
             FROM User_Favorite_Tours f
             JOIN Tours t ON f.TourID = t.TourID
-            WHERE f.UserID = ?
+            WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()
             ORDER BY f.SavedAt DESC
         `;
         const [tours] = await pool.query(query, [userId]);

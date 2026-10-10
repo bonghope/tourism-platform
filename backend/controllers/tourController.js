@@ -6,6 +6,18 @@ class TourController {
     static async getAll(req, res, next) {
         try {
             const { page = 1, limit = 10, destinationId, keyword, minPrice, maxPrice, startDate, endDate } = req.query;
+            const validDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+                && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+            const hasPrice = value => value !== undefined && value !== '';
+            if (!Number.isSafeInteger(Number(page)) || Number(page) < 1
+                || !Number.isSafeInteger(Number(limit)) || Number(limit) < 1 || Number(limit) > 100
+                || [minPrice, maxPrice].some(value => hasPrice(value) && (!Number.isFinite(Number(value)) || Number(value) < 0))
+                || (hasPrice(minPrice) && hasPrice(maxPrice) && Number(minPrice) > Number(maxPrice))
+                || (startDate && !validDate(startDate)) || (endDate && !validDate(endDate))
+                || (startDate && endDate && startDate > endDate)
+                || (keyword !== undefined && typeof keyword !== 'string')) {
+                return res.status(400).json({ success: false, message: 'Bộ lọc không hợp lệ. Kiểm tra khoảng giá, ngày khởi hành và số trang.' });
+            }
             const userId = req.user ? req.user.userId : null;
 
             let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.DiscountPercent, t.StartDate, t.Duration, t.MaxSlots, t.AvailableSlots, ${ratingColumns()}`;
@@ -19,8 +31,11 @@ class TourController {
                 fromClause += ` LEFT JOIN User_Favorite_Tours f ON t.TourID = f.TourID AND f.UserID = ?`;
             }
 
-            let whereClause = ` WHERE t.Status = 'PUBLISHED'`;
+            let whereClause = ` WHERE t.Status = 'PUBLISHED' AND t.StartDate > NOW()`;
             const params = [];
+            if (req.query.promotion === 'true') {
+                whereClause += ` AND t.OriginalPrice > t.Price AND t.AvailableSlots > 0`;
+            }
 
             if (userId) params.push(userId);
             if (destinationId) {
@@ -28,8 +43,11 @@ class TourController {
                 params.push(destinationId);
             }
             if (keyword && keyword.trim()) {
-                whereClause += ` AND t.Title LIKE ?`;
-                params.push(`%${keyword.trim()}%`);
+                whereClause += ` AND (t.Title LIKE ? OR EXISTS (
+                    SELECT 1 FROM Tour_Destinations searchTd
+                    INNER JOIN Destinations searchD ON searchD.DestinationID = searchTd.DestinationID
+                    WHERE searchTd.TourID = t.TourID AND searchD.Name LIKE ?))`;
+                params.push(`%${keyword.trim()}%`, `%${keyword.trim()}%`);
             }
             if (minPrice !== undefined && minPrice !== '') {
                 whereClause += ` AND t.Price >= ?`;
@@ -44,7 +62,7 @@ class TourController {
                 params.push(startDate);
             }
             if (endDate) {
-                whereClause += ` AND t.StartDate <= ?`;
+                whereClause += ` AND t.StartDate < DATE_ADD(?, INTERVAL 1 DAY)`;
                 params.push(endDate);
             }
 
@@ -143,10 +161,10 @@ class TourController {
         try {
             const userId = req.user.userId;
             const query = `
-                SELECT t.TourID, t.Title, t.Slug, t.Price, t.Duration, ${ratingColumns()}, f.SavedAt
+                SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}, f.SavedAt
                 FROM Tours t
                 INNER JOIN User_Favorite_Tours f ON t.TourID = f.TourID
-                WHERE f.UserID = ? AND t.Status = 'PUBLISHED'
+                WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()
                 ORDER BY f.SavedAt DESC
             `;
             const [rows] = await pool.query(query, [userId]);
