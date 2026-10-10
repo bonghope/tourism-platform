@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { syncRating } = require('../utils/tourRatings');
+const { enqueueRating } = require('../utils/tourRatings');
 const { decodeImages, saveImages, removeImages } = require('../utils/reviewImages');
 
 // 1. Khách hàng gửi đánh giá mới
@@ -77,7 +77,7 @@ exports.createReview = async (req, res) => {
             [reviewId, bookingId, userId, tourId, rating, sanitizedContent, JSON.stringify(imageUrls)]
         );
 
-        await syncRating(connection, tourId);
+        await enqueueRating(connection, tourId);
 
         await connection.commit();
         res.status(201).json({ success: true, message: 'Cảm ơn bạn đã chia sẻ trải nghiệm!' });

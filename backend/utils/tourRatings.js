@@ -1,13 +1,16 @@
 // Only reviews visible to customers contribute to displayed tour ratings.
 function ratingColumns(tourAlias = 't') {
-  return `(SELECT COUNT(*) FROM Reviews rating_reviews WHERE rating_reviews.TourID = ${tourAlias}.TourID AND rating_reviews.Status = 'PUBLISHED') AS ReviewCount,
-          COALESCE((SELECT AVG(Rating) FROM Reviews rating_reviews WHERE rating_reviews.TourID = ${tourAlias}.TourID AND rating_reviews.Status = 'PUBLISHED'), 0) AS AverageRating`;
+  return `${tourAlias}.ReviewCount, ${tourAlias}.AverageRating`;
+}
+async function enqueueRating(connection, tourId) {
+  await connection.query(`INSERT INTO Tour_Rating_Jobs (TourID) VALUES (?)
+    ON DUPLICATE KEY UPDATE UpdatedAt = CURRENT_TIMESTAMP`, [tourId]);
 }
 async function syncRating(connection, tourId) {
-  await connection.query(`UPDATE Tours SET
-    AverageRating = COALESCE((SELECT AVG(Rating) FROM Reviews WHERE TourID = ? AND Status = 'PUBLISHED'), 0),
-    TotalRatingPts = COALESCE((SELECT SUM(Rating) FROM Reviews WHERE TourID = ? AND Status = 'PUBLISHED'), 0),
-    ReviewCount = (SELECT COUNT(*) FROM Reviews WHERE TourID = ? AND Status = 'PUBLISHED')
-    WHERE TourID = ?`, [tourId, tourId, tourId, tourId]);
+  const [rows] = await connection.query(`SELECT COALESCE(SUM(Rating), 0) AS points, COUNT(*) AS count
+    FROM Reviews WHERE TourID = ? AND Status = 'PUBLISHED'`, [tourId]);
+  const points = Number(rows[0].points), count = Number(rows[0].count);
+  await connection.query(`UPDATE Tours SET TotalRatingPts = ?, ReviewCount = ?, AverageRating = ? WHERE TourID = ?`,
+    [points, count, count ? points / count : 0, tourId]);
 }
-module.exports = { ratingColumns, syncRating };
+module.exports = { ratingColumns, syncRating, enqueueRating };

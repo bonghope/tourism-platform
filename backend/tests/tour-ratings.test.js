@@ -3,23 +3,18 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { ratingColumns, syncRating } = require('../utils/tourRatings');
-test('live ratings explicitly scope aggregate to published reviews and tour',()=>{
+test('tour reads use cached ratings without querying reviews',()=>{
  const sql=ratingColumns('Tours');
- assert.ok(sql.includes('AVG(Rating)'));assert.ok(sql.includes('COUNT(*)'));
- assert.equal((sql.match(/Status = 'PUBLISHED'/g)||[]).length,2);
- assert.equal((sql.match(/= Tours.TourID/g)||[]).length,2);
- assert.ok(sql.includes('COALESCE'));
+ assert.equal(sql, 'Tours.ReviewCount, Tours.AverageRating');
+ assert.equal(sql.includes('Reviews'), false);
 });
 test('cache recalculation uses actual aggregates, not old counters',async()=>{
- let captured;
- await syncRating({query:async(sql,params)=>{captured={sql,params};}},'TOUR_A');
- assert.deepEqual(captured.params,['TOUR_A','TOUR_A','TOUR_A','TOUR_A']);
- assert.ok(captured.sql.includes('AVG(Rating)'));
- assert.ok(captured.sql.includes('SUM(Rating)'));
- assert.ok(captured.sql.includes('COUNT(*)'));
- assert.equal(captured.sql.includes('ReviewCount + 1'),false);
+ const calls=[];
+ await syncRating({query:async(sql,params)=>{calls.push({sql,params});return [[{points:9,count:2}]];}},'TOUR_A');
+ assert.ok(calls[0].sql.includes("Status = 'PUBLISHED'"));
+ assert.deepEqual(calls[1].params,[9,2,4.5,'TOUR_A']);
 });
-test('hiding review recalculates totals inside transaction before commit',async()=>{
+test('hiding review queues rating update in the same transaction',async()=>{
  const calls=[];
  const connection={beginTransaction:async()=>calls.push('begin'),query:async(sql)=>{calls.push(sql);return sql.startsWith('SELECT TourID FROM Reviews')?[[{TourID:'TOUR_A'}]]:[{}];},commit:async()=>calls.push('commit'),rollback:async()=>calls.push('rollback'),release:()=>calls.push('release')};
  const sandbox={module:{exports:{}},require:name=>name.includes('database')?{getConnection:async()=>connection}:require(name),console};
@@ -28,6 +23,6 @@ test('hiding review recalculates totals inside transaction before commit',async(
  await sandbox.module.exports.hideReview({params:{reviewId:'REVIEW_A'}},res);
  assert.equal(res.code,200);
  const hidden=calls.findIndex(sql=>sql.startsWith('UPDATE Reviews'));
- const sync=calls.findIndex(sql=>sql.startsWith('UPDATE Tours'));
+ const sync=calls.findIndex(sql=>sql.startsWith('INSERT INTO Tour_Rating_Jobs'));
  assert.ok(sync>hidden);assert.ok(calls.indexOf('commit')>sync);
 });

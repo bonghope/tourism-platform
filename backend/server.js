@@ -56,6 +56,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 require('./cron/bookingWorker');
+require('./cron/ratingWorker').startRatingWorker(require('./config/database'));
 app.listen(PORT, () => {
     console.log(`Server đang chạy cực mượt tại http://localhost:${PORT}`);
 });
