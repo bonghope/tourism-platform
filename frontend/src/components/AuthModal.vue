@@ -176,10 +176,7 @@
                 <span v-else>{{ otpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
               </button>
             </div>
-            <p v-if="!otpSent" class="otp-help-text">
-              Chỉ cần nhập SĐT rồi bấm nút <strong>"Lấy mã"</strong> bên phải để nhận OTP.
-            </p>
-            <p v-else class="otp-help-text otp-success-text">
+            <p v-if="otpSent" class="otp-help-text otp-success-text">
               Mã OTP đã gửi đến SĐT <strong>{{ regForm.phone }}</strong>: <strong>{{ regForm.otp }}</strong>
             </p>
           </div>
@@ -471,10 +468,7 @@
                 <span v-else>{{ googleOtpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
               </button>
             </div>
-            <p v-if="!googleOtpSent" class="otp-help-text">
-              Chỉ cần nhập Gmail rồi bấm nút <strong>"Lấy mã"</strong> bên phải để nhận OTP.
-            </p>
-            <p v-else class="otp-help-text otp-success-text">
+            <p v-if="googleOtpSent" class="otp-help-text otp-success-text">
               Mã OTP đã gửi đến Gmail <strong>{{ googleForm.email }}</strong>: <strong>{{ googleForm.otp }}</strong>
             </p>
           </div>
@@ -1240,9 +1234,16 @@ onUnmounted(() => {
   flex: 1;
   height: 48px;
   font-size: 0.95rem;
-  letter-spacing: 2px;
-  font-weight: 600;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-family: inherit;
   box-sizing: border-box;
+}
+
+.otp-input-box::placeholder {
+  letter-spacing: normal;
+  font-weight: 400;
+  font-family: inherit;
 }
 
 .btn-get-otp-action {
@@ -1253,8 +1254,9 @@ onUnmounted(() => {
   color: #ffffff;
   border: 1.5px solid var(--primary-color, #007d68);
   border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: normal;
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
