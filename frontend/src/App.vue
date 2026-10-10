@@ -30,7 +30,11 @@ const toastStore = useToastStore();
 
 <style>
 :root {
-  --primary-color: #2563eb;
+  --primary-color: #007d68;
+  --primary-hover: #006050;
+  --primary-mint: #00b99a;
+  --primary-light: #e6f7f2;
+  --primary-gradient: linear-gradient(135deg, #00b99a 0%, #007d68 100%);
   --secondary-color: #0f172a;
   --accent-color: #f59e0b;
   --bg-color: #f8fafc;
@@ -124,8 +128,8 @@ body {
   border-left: 4px solid #f59e0b;
 }
 .toast-item.info {
-  border-left: 4px solid #2563eb;
-  color: #1e40af;
+  border-left: 4px solid var(--primary-color, #007d68);
+  color: var(--primary-color, #007d68);
 }
 .toast-close {
   background: transparent;
