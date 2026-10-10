@@ -12,6 +12,8 @@ router.get('/profile', verifyToken, userController.getProfile);
 router.put('/profile', verifyToken, userController.updateProfile);
 router.post('/request-email-otp', verifyToken, userController.requestEmailOtp);
 router.post('/verify-email-otp', verifyToken, userController.verifyEmailOtp);
+router.post('/request-phone-otp', verifyToken, userController.requestPhoneOtp);
+router.post('/verify-phone-otp', verifyToken, userController.verifyPhoneOtp);
 
 // 2. Wishlist Tours
 router.get('/wishlist', verifyToken, userController.getWishlist);

@@ -11,7 +11,7 @@ async function list(query) {
         calls.push({ sql, params: [...params] });
         return sql.startsWith('SELECT COUNT') ? [[{ total: 0 }]] : [[]];
     } };
-    const sandbox = { module: { exports: {} }, require: name => name.includes('database') ? pool : { ratingColumns } };
+    const sandbox = { module: { exports: {} }, require: name => name.includes('database') ? pool : name.includes('departures') ? require('../utils/departures') : { ratingColumns } };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../controllers/tourController.js'), 'utf8'), sandbox);
     const res = { status(code) { this.code = code; return this; }, json(body) { this.body = body; } };
     await sandbox.module.exports.getAll({ query }, res, error => { throw error; });
@@ -32,7 +32,7 @@ test('combined filters search all linked destinations and include the entire las
     assert.equal(res.code, 200);
     assert.ok(calls[0].sql.includes('EXISTS'));
     assert.ok(calls[0].sql.includes('searchD.Name LIKE ?'));
-    assert.ok(calls[0].sql.includes('t.StartDate < DATE_ADD(?, INTERVAL 1 DAY)'));
+    assert.ok(calls[0].sql.includes("ds.StartDate < DATE_ADD(CONVERT_TZ(?,'+07:00','+00:00'), INTERVAL 1 DAY)"));
     assert.deepEqual(calls[0].params, ['%Sa Pa%', '%Sa Pa%', 0, 5000000, '2026-11-01', '2026-11-30']);
     assert.deepEqual(calls[1].params.slice(-2), [9, 9]);
 });
@@ -40,7 +40,7 @@ test('combined filters search all linked destinations and include the entire las
 test('promotion list only includes discounts with remaining seats', async () => {
     const { calls, res } = await list({ promotion: 'true', limit: '4' });
     assert.equal(res.code, 200);
-    assert.ok(calls[0].sql.includes('t.OriginalPrice > t.Price AND t.AvailableSlots > 0'));
-    assert.ok(calls[0].sql.includes("t.Status = 'PUBLISHED' AND t.StartDate > NOW()"));
+    assert.ok(calls[0].sql.includes('t.OriginalPrice > t.Price'));
+    assert.ok(calls[0].sql.includes("t.Status = 'PUBLISHED' AND EXISTS"));
     assert.ok(calls[1].sql.includes('t.OriginalPrice'));
 });

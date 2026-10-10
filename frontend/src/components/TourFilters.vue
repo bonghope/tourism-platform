@@ -4,8 +4,24 @@
     <label class="keyword-field">Tên tour / điểm đến
       <input :value="modelValue.keyword" @input="update('keyword', $event.target.value)" type="search" placeholder="Sa Pa, Hà Giang, Hạ Long…" />
     </label>
-    <label>Giá từ (VNĐ)<input :value="modelValue.minPrice" @input="update('minPrice', $event.target.value)" type="number" min="0" step="any" placeholder="Không giới hạn" /></label>
-    <label>Giá đến (VNĐ)<input :value="modelValue.maxPrice" @input="update('maxPrice', $event.target.value)" type="number" min="0" step="any" placeholder="Không giới hạn" /></label>
+    <label>Giá từ (VNĐ)
+      <input 
+        :value="formatInputThousands(modelValue.minPrice)" 
+        @input="handlePriceInput('minPrice', $event)" 
+        type="text" 
+        inputmode="numeric" 
+        placeholder="Ví dụ: 1.000.000" 
+      />
+    </label>
+    <label>Giá đến (VNĐ)
+      <input 
+        :value="formatInputThousands(modelValue.maxPrice)" 
+        @input="handlePriceInput('maxPrice', $event)" 
+        type="text" 
+        inputmode="numeric" 
+        placeholder="Ví dụ: 10.000.000" 
+      />
+    </label>
     <label>Khởi hành từ<input :value="modelValue.startDate" @input="update('startDate', $event.target.value)" type="date" /></label>
     <label>Đến hết ngày<input :value="modelValue.endDate" @input="update('endDate', $event.target.value)" type="date" :min="modelValue.startDate || undefined" /></label>
     <div class="filter-actions"><button class="btn-apply" type="submit">Lọc kết quả</button><button class="btn-reset" type="button" @click="$emit('reset')">Đặt lại</button></div>
@@ -17,6 +33,19 @@
 const props = defineProps({ modelValue: { type: Object, required: true }, error: { type: String, default: '' } });
 const emit = defineEmits(['update:modelValue', 'apply', 'reset']);
 const update = (key, value) => emit('update:modelValue', { ...props.modelValue, [key]: value });
+
+const formatInputThousands = (val) => {
+  if (val === undefined || val === null || val === '') return '';
+  const numStr = String(val).replace(/\D/g, '');
+  if (!numStr) return '';
+  return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+const handlePriceInput = (key, event) => {
+  const rawValue = event.target.value.replace(/\D/g, '');
+  update(key, rawValue);
+  event.target.value = formatInputThousands(rawValue);
+};
 </script>
 
 <style scoped>

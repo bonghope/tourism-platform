@@ -11,6 +11,7 @@ export default defineConfig({
     port: 5175
   },
   resolve: {
+    preserveSymlinks: true,
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },

@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const { enqueueRating } = require('../utils/tourRatings');
 const { validateTourDates } = require('../utils/tourDates');
 const crypto = require('crypto');
+const { departureColumns } = require('../utils/departures');
 
 // ==========================================
 // 1. QUẢN LÝ TÀI KHOẢN (USERS)
@@ -92,44 +93,25 @@ const toggleDestinationStatus = async (req, res) => {
 // ==========================================
 const getAllTours = async (req, res) => {
     try {
-        const [rows] = await pool.query(`SELECT t.*,
+        const [rows] = await pool.query(`SELECT t.*, ${departureColumns()},
           (SELECT td.DestinationID FROM Tour_Destinations td WHERE td.TourID=t.TourID LIMIT 1) AS DestinationID
-          FROM Tours t ORDER BY t.StartDate DESC`);
+          FROM Tours t ORDER BY t.Title`);
         return res.json({ success: true, data: rows });
     } catch (error) { return res.status(500).json({ success: false, message: 'Không thể tải danh sách tour.' }); }
 };
 const createTour = async (req, res) => {
+    let connection;
     try {
-        const { title, slug, price, originalPrice, discountPercent, startDate, endDate, duration, maxSlots, destinationId, itinerary } = req.body;
-        let dates;
-        try { dates = validateTourDates(startDate, endDate); }
-        catch (error) { return res.status(400).json({ success: false, message: error.message }); }
-        if (price <= 0) return res.status(400).json({ success: false, message: "Giá tiền phải > 0" });
-
+        const { title, slug, price, originalPrice, discountPercent, duration, destinationId, itinerary } = req.body;
+        if (!title?.trim() || !slug?.trim() || !duration?.trim() || !Number.isFinite(Number(price)) || Number(price) <= 0) throw new Error('Nhập tên, slug, thời lượng và giá tour hợp lệ.');
         const tourId = crypto.randomUUID();
-        const itineraryJson = itinerary ? (typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary)) : null;
-
-        const disc = Number(discountPercent) || 0;
-        const origPrice = disc > 0 ? (Number(originalPrice) || Number(price)) : null;
-        const finalPrice = Number(price) > 0 ? Number(price) : (origPrice ? Math.round(origPrice * (1 - disc / 100)) : 0);
-
-        // Tạo Tour mới (Mặc định Status = DRAFT, AvailableSlots = maxSlots)
-        await pool.query(
-            `INSERT INTO Tours (TourID, Title, Slug, Price, OriginalPrice, DiscountPercent, StartDate, EndDate, Duration, MaxSlots, AvailableSlots, Itinerary, Status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT')`,
-            [tourId, title, slug, finalPrice, origPrice, disc, dates.startDate, dates.endDate, duration, maxSlots, maxSlots, itineraryJson]
-        );
-
-        // Nối Tour với Địa danh (Bảng trung gian)
-        if (destinationId) {
-            await pool.query(`INSERT INTO Tour_Destinations (TourID, DestinationID) VALUES (?, ?)`, [tourId, destinationId]);
-        }
-
-        return res.status(201).json({ success: true, message: "Tạo Tour nháp thành công!", tourId });
-    } catch (error) {
-        console.error("LỖI DATABASE BÁO VỀ:", error);
-        return res.status(500).json({ success: false, message: "Lỗi khi tạo Tour." });
-    }
+        connection = await pool.getConnection(); await connection.beginTransaction();
+        await connection.query("INSERT INTO Tours (TourID, Title, Slug, Price, OriginalPrice, DiscountPercent, Duration, Itinerary, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT')", [tourId,title.trim(),slug.trim(),price,originalPrice || null,discountPercent || 0,duration,JSON.stringify(itinerary || [])]);
+        if (destinationId) await connection.query('INSERT INTO Tour_Destinations (TourID, DestinationID) VALUES (?, ?)',[tourId,destinationId]);
+        await connection.commit();
+        return res.status(201).json({success:true,message:'Tạo tour thành công. Hãy thêm lịch khởi hành.',tourId});
+    } catch(error) { if (connection) await connection.rollback(); return res.status(400).json({success:false,message:error.message}); }
+    finally { if (connection) connection.release(); }
 };
 
 const softDeleteTour = async (req, res) => {
@@ -168,8 +150,8 @@ const forceCancelBooking = async (req, res) => {
 
         // Hoàn trả lại số chỗ trống (AvailableSlots) cho Tour
         await connection.query(
-            "UPDATE Tours SET AvailableSlots = AvailableSlots + ? WHERE TourID = ?",
-            [booking.PassengerCount, booking.TourID]
+            "UPDATE TourDepartures SET AvailableSlots = AvailableSlots + ? WHERE DepartureID = ?",
+            [booking.PassengerCount, booking.DepartureID]
         );
 
         await connection.commit(); // Xác nhận lưu DB
@@ -268,46 +250,20 @@ const updateDestination = async (req, res) => {
 // ==========================================
 // BỔ SUNG: CẬP NHẬT TOUR & VÒNG ĐỜI TOUR
 // ==========================================
-const updateTour = async (req, res) => {
-    let connection;
-    try {
-        const { tourId } = req.params;
-        const { title, slug, price, originalPrice, discountPercent, destinationId, startDate, endDate, duration, maxSlots, status, itinerary } = req.body;
-        if (maxSlots !== undefined && (!Number.isInteger(Number(maxSlots)) || Number(maxSlots) < 1)) throw new Error('Sức chứa phải là số nguyên dương.');
-        if (price !== undefined && (!Number.isFinite(Number(price)) || Number(price) <= 0)) throw new Error('Giá tiền phải lớn hơn 0.');
-        if (status && !['DRAFT','PUBLISHED','HIDDEN'].includes(status)) throw new Error('Trạng thái tour không hợp lệ.');
-        connection = await pool.getConnection();
-        await connection.beginTransaction();
-        const [tours] = await connection.query('SELECT MaxSlots, AvailableSlots, StartDate, EndDate, Status FROM Tours WHERE TourID = ? FOR UPDATE', [tourId]);
-        if (!tours.length) throw new Error('Không tìm thấy tour.');
-        let dates;
-        if (startDate !== undefined || endDate !== undefined || status === 'PUBLISHED') {
-            dates = validateTourDates(startDate ?? tours[0].StartDate, endDate ?? tours[0].EndDate);
-            if ((status ?? tours[0].Status) === 'PUBLISHED' && new Date(dates.startDate) <= new Date()) throw new Error('Tour mở bán phải có ngày khởi hành trong tương lai.');
-        }
-        const used = Number(tours[0].MaxSlots) - Number(tours[0].AvailableSlots);
-        if (maxSlots !== undefined && Number(maxSlots) < used) throw new Error('Sức chứa không được nhỏ hơn số chỗ đã giữ/đã bán (' + used + ').');
-        const slots = maxSlots === undefined ? Number(tours[0].AvailableSlots) : Number(maxSlots) - used;
-        const itineraryJson = itinerary === undefined ? null : typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary);
-        await connection.query(
-            'UPDATE Tours SET Title = COALESCE(?, Title), Slug = COALESCE(?, Slug), Price = COALESCE(?, Price), StartDate = COALESCE(?, StartDate), Duration = COALESCE(?, Duration), MaxSlots = COALESCE(?, MaxSlots), AvailableSlots = ?, Status = COALESCE(?, Status), Itinerary = COALESCE(?, Itinerary) WHERE TourID = ?',
-            [title ?? null, slug ?? null, price ?? null, dates?.startDate ?? null, duration ?? null, maxSlots ?? null, slots, status ?? null, itineraryJson, tourId]
-        );
-        if (originalPrice !== undefined || discountPercent !== undefined) {
-            if (discountPercent !== undefined && (!Number.isFinite(Number(discountPercent)) || Number(discountPercent) < 0 || Number(discountPercent) >= 100)) throw new Error('Invalid discount percentage');
-            await connection.query('UPDATE Tours SET OriginalPrice = ?, DiscountPercent = COALESCE(?, DiscountPercent) WHERE TourID = ?', [originalPrice ?? null, discountPercent ?? null, tourId]);
-        }
-        if (destinationId !== undefined) {
-            await connection.query('DELETE FROM Tour_Destinations WHERE TourID = ?', [tourId]);
-            if (destinationId) await connection.query('INSERT INTO Tour_Destinations (TourID, DestinationID) VALUES (?, ?)', [tourId, destinationId]);
-        }
-        if (dates) await connection.query('UPDATE Tours SET StartDate = ?, EndDate = ? WHERE TourID = ?', [dates.startDate, dates.endDate, tourId]);
-        await connection.commit();
-        return res.status(200).json({ success:true, message:'Cập nhật tour thành công!' });
-    } catch (error) {
-        if (connection) await connection.rollback();
-        return res.status(400).json({ success:false, message:error.message });
-    } finally { if (connection) connection.release(); }
+const updateTour = async (req,res) => {
+ let connection;
+ try {
+  const {title,slug,price,originalPrice,discountPercent,duration,status,itinerary,destinationId}=req.body;
+  if (price !== undefined && (!Number.isFinite(Number(price)) || Number(price)<=0)) throw Error('Giá tour phải lớn hơn 0.');
+  if (status && !['DRAFT','PUBLISHED','HIDDEN'].includes(status)) throw Error('Trạng thái không hợp lệ.');
+  if (discountPercent !== undefined && (!Number.isFinite(Number(discountPercent)) || Number(discountPercent)<0 || Number(discountPercent)>=100)) throw Error('Phần trăm giảm giá không hợp lệ.');
+  connection=await pool.getConnection();await connection.beginTransaction();
+  const [rows]=await connection.query('SELECT TourID FROM Tours WHERE TourID=? FOR UPDATE',[req.params.tourId]);if(!rows.length)throw Error('Không tìm thấy tour.');
+  await connection.query('UPDATE Tours SET Title=COALESCE(?,Title), Slug=COALESCE(?,Slug), Price=COALESCE(?,Price), Duration=COALESCE(?,Duration), Status=COALESCE(?,Status), Itinerary=COALESCE(?,Itinerary) WHERE TourID=?',[title ?? null,slug ?? null,price ?? null,duration ?? null,status ?? null,itinerary === undefined ? null : typeof itinerary === 'string' ? itinerary : JSON.stringify(itinerary),req.params.tourId]);
+  if(originalPrice!==undefined || discountPercent!==undefined) await connection.query('UPDATE Tours SET OriginalPrice=?,DiscountPercent=COALESCE(?,DiscountPercent) WHERE TourID=?',[originalPrice ?? null,discountPercent ?? null,req.params.tourId]);
+  if(destinationId!==undefined){await connection.query('DELETE FROM Tour_Destinations WHERE TourID=?',[req.params.tourId]);if(destinationId)await connection.query('INSERT INTO Tour_Destinations (TourID,DestinationID) VALUES (?,?)',[req.params.tourId,destinationId]);}
+  await connection.commit();return res.json({success:true,message:'Đã cập nhật thông tin tour.'});
+ }catch(error){if(connection)await connection.rollback();return res.status(400).json({success:false,message:error.message});}finally{if(connection)connection.release();}
 };
 
 const updateTourStatus = async (req, res) => {
@@ -316,14 +272,6 @@ const updateTourStatus = async (req, res) => {
         const { status } = req.body; // 'DRAFT', 'PUBLISHED', 'HIDDEN'
         if (!['DRAFT', 'PUBLISHED', 'HIDDEN'].includes(status)) {
             return res.status(400).json({ success: false, message: "Trạng thái không hợp lệ (chỉ nhận DRAFT, PUBLISHED, HIDDEN)." });
-        }
-        if (status === 'PUBLISHED') {
-            const [rows] = await pool.query('SELECT StartDate, EndDate FROM Tours WHERE TourID = ?', [tourId]);
-            if (!rows.length) return res.status(404).json({ success: false, message: 'Không tìm thấy Tour.' });
-            try {
-                const dates = validateTourDates(rows[0].StartDate, rows[0].EndDate);
-                if (new Date(dates.startDate) <= new Date()) throw new Error('Tour mở bán phải có ngày khởi hành trong tương lai.');
-            } catch (error) { return res.status(400).json({ success: false, message: error.message }); }
         }
         const [result] = await pool.query('UPDATE Tours SET Status = ? WHERE TourID = ?', [status, tourId]);
         if (result.affectedRows === 0) {
@@ -386,10 +334,10 @@ const getAllBookings = async (req, res) => {
             SELECT b.BookingID, b.CreatedAt, b.PassengerCount, b.TotalPrice, b.Status,
                    b.PaymentMethod, b.ContactName, b.ContactPhone,
                    u.FullName AS CustomerName, u.Email,
-                   t.Title AS TourTitle, t.StartDate
+                   t.Title AS TourTitle, b.DepartureID, DATE_FORMAT(d.StartDate, '%Y-%m-%dT%H:%i:%sZ') AS StartDate
             FROM Bookings b
             JOIN Users u ON b.UserID = u.UserID
-            JOIN Tours t ON b.TourID = t.TourID
+            JOIN Tours t ON b.TourID = t.TourID JOIN TourDepartures d ON d.DepartureID=b.DepartureID
         `;
         const params = [];
 

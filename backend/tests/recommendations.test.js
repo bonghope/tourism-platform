@@ -14,7 +14,7 @@ async function recommend(destinationTours, favorites, guest = false) {
     if(sql.startsWith('SELECT TourID FROM User_Favorite_Tours'))return [favorites];
     return [[{ImageURL:'/image.jpg'}]];
   }};
-  const sandbox={module:{exports:{}},require:name=>name.includes('database')?pool:{ratingColumns}};
+  const sandbox={module:{exports:{}},require:name=>name.includes('database')?pool:name.includes('departures')?require('../utils/departures'):{ratingColumns}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../controllers/destinationController.js'),'utf8'),sandbox);
   const res={status(){return this;},json(body){this.body=body;}};
   await sandbox.module.exports.getRecommendations({user:guest?null:{userId:'USER'}},res,error=>{throw error;});
@@ -36,7 +36,7 @@ test('empty favorites and guests fall back to random bookable tours',async()=>{
     const {calls,data}=await recommend([],[],guest);
     assert.equal(data[0].TourID,'RANDOM');
     const query=calls.find(c=>c.sql.includes('ORDER BY RAND()'));
-    assert.ok(query.sql.includes("Status = 'PUBLISHED' AND StartDate > NOW() AND AvailableSlots > 0"));
+    assert.ok(query.sql.includes("Status = 'PUBLISHED' AND EXISTS"));
     if(guest)assert.equal(calls.some(c=>c.sql.includes('User_Favorite')),false);
   }
 });

@@ -38,10 +38,13 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, onUnmounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import TourCard from './TourCard.vue';
 import TourFilters from './TourFilters.vue';
 import { useAuthStore } from '../stores/auth';
 
+const route = useRoute();
+const router = useRouter();
 const tours = ref([]);
 const loading = ref(true);
 const error = ref(null);
@@ -54,6 +57,54 @@ const page = ref(1);
 const totalItems = ref(0);
 const totalPages = ref(0);
 let pendingRequest;
+
+const syncUrlQuery = () => {
+  const query = {};
+  if (appliedFilters.value.keyword) query.keyword = appliedFilters.value.keyword;
+  if (appliedFilters.value.minPrice) query.minPrice = appliedFilters.value.minPrice;
+  if (appliedFilters.value.maxPrice) query.maxPrice = appliedFilters.value.maxPrice;
+  if (appliedFilters.value.startDate) query.startDate = appliedFilters.value.startDate;
+  if (appliedFilters.value.endDate) query.endDate = appliedFilters.value.endDate;
+  if (page.value > 1) query.page = String(page.value);
+
+  try {
+    sessionStorage.setItem('saved_tour_filters', JSON.stringify({ ...appliedFilters.value, page: page.value }));
+  } catch (e) {}
+
+  router.replace({ query }).catch(() => {});
+};
+
+const loadSavedFilters = () => {
+  const q = route.query;
+  const hasQuery = q.keyword || q.minPrice || q.maxPrice || q.startDate || q.endDate || q.page;
+  if (hasQuery) {
+    if (q.keyword) filters.keyword = String(q.keyword);
+    if (q.minPrice) filters.minPrice = String(q.minPrice);
+    if (q.maxPrice) filters.maxPrice = String(q.maxPrice);
+    if (q.startDate) filters.startDate = String(q.startDate);
+    if (q.endDate) filters.endDate = String(q.endDate);
+    if (q.page && Number(q.page) >= 1) page.value = Number(q.page);
+    appliedFilters.value = { ...filters };
+    return;
+  }
+
+  try {
+    const saved = sessionStorage.getItem('saved_tour_filters');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed) {
+        if (parsed.keyword) filters.keyword = String(parsed.keyword);
+        if (parsed.minPrice) filters.minPrice = String(parsed.minPrice);
+        if (parsed.maxPrice) filters.maxPrice = String(parsed.maxPrice);
+        if (parsed.startDate) filters.startDate = String(parsed.startDate);
+        if (parsed.endDate) filters.endDate = String(parsed.endDate);
+        if (parsed.page && Number(parsed.page) >= 1) page.value = Number(parsed.page);
+        appliedFilters.value = { ...filters };
+        syncUrlQuery();
+      }
+    }
+  } catch (e) {}
+};
 
 const applyFilters = () => {
   filterError.value = '';
@@ -69,10 +120,26 @@ const applyFilters = () => {
   }
   appliedFilters.value = { ...filters, keyword: filters.keyword.trim() };
   page.value = 1;
+  syncUrlQuery();
   fetchTours();
 };
-const resetFilters = () => { Object.assign(filters, emptyFilters()); applyFilters(); };
-const changePage = value => { page.value = value; fetchTours(); };
+
+const resetFilters = () => {
+  Object.assign(filters, emptyFilters());
+  appliedFilters.value = emptyFilters();
+  page.value = 1;
+  try {
+    sessionStorage.removeItem('saved_tour_filters');
+  } catch (e) {}
+  router.replace({ query: {} }).catch(() => {});
+  fetchTours();
+};
+
+const changePage = value => {
+  page.value = value;
+  syncUrlQuery();
+  fetchTours();
+};
 
 const fetchTours = async () => {
   pendingRequest?.abort();
@@ -103,6 +170,7 @@ const fetchTours = async () => {
 };
 
 onMounted(() => {
+  loadSavedFilters();
   window.scrollTo(0, 0);
   fetchTours();
 });

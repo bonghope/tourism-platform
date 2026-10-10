@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { departureColumns } = require('../utils/departures');
 const { ratingColumns } = require('../utils/tourRatings');
 
 class DestinationController {
@@ -19,18 +20,18 @@ class DestinationController {
         try {
             const { keyword } = req.query;
             let query = `
-                SELECT DestinationID, Name, Slug, Description, ImageURL 
-                FROM Destinations 
+                SELECT DestinationID, Name, Slug, Description, ImageURL
+                FROM Destinations
                 WHERE Status = 'PUBLISHED'
             `;
             const params = [];
-            
+
             if (keyword && keyword.trim()) {
                 query += ` AND (Name LIKE ? OR Keywords LIKE ?)`;
                 const searchTerm = `%${keyword.trim()}%`;
                 params.push(searchTerm, searchTerm);
             }
-            
+
             const [rows] = await pool.query(query, params);
             res.status(200).json({ success: true, data: rows });
         } catch (error) {
@@ -47,12 +48,12 @@ class DestinationController {
             // 1. Ưu tiên gợi ý theo Địa danh yêu thích của User
             if (userId) {
                 const [destRows] = await pool.query(`
-                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}
+                    SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, ${departureColumns()}, ${ratingColumns()}
                     FROM Tours t
                     INNER JOIN Tour_Destinations td ON t.TourID = td.TourID
                     INNER JOIN User_Favorite_Destinations fd ON td.DestinationID = fd.DestinationID
-                    WHERE fd.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW() AND t.AvailableSlots > 0
-                    ORDER BY t.StartDate ASC
+                    WHERE fd.UserID = ? AND t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)
+                    ORDER BY StartDate ASC
                     LIMIT 4
                 `, [userId]);
                 rows = destRows;
@@ -60,11 +61,11 @@ class DestinationController {
                 // 2. No eligible destination tours: return only explicitly saved tours.
                 if (rows.length === 0) {
                     const [tourRows] = await pool.query(`
-                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}
+                        SELECT DISTINCT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, ${departureColumns()}, ${ratingColumns()}
                         FROM Tours t
                         INNER JOIN User_Favorite_Tours ft ON ft.TourID = t.TourID
-                        WHERE ft.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW() AND t.AvailableSlots > 0
-                        ORDER BY t.StartDate ASC
+                        WHERE ft.UserID = ? AND t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)
+                        ORDER BY StartDate ASC
                         LIMIT 4
                     `, [userId]);
                     rows = tourRows;
@@ -74,9 +75,9 @@ class DestinationController {
             // 3. No eligible favorites, or guest: choose random bookable tours.
             if (rows.length === 0) {
                 const [fallbackRows] = await pool.query(`
-                    SELECT TourID, Title, Slug, Price, OriginalPrice, Duration, StartDate, ${ratingColumns('Tours')}
+                    SELECT TourID, Title, Slug, Price, OriginalPrice, Duration, ${departureColumns('Tours')}, ${ratingColumns('Tours')}
                     FROM Tours
-                    WHERE Status = 'PUBLISHED' AND StartDate > NOW() AND AvailableSlots > 0
+                    WHERE Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=Tours.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)
                     ORDER BY RAND()
                     LIMIT 4
                 `);
@@ -107,12 +108,12 @@ class DestinationController {
         try {
             const destinationId = req.params.id;
             const query = `
-                SELECT DestinationID, Name, Slug, Description, ImageURL 
-                FROM Destinations 
+                SELECT DestinationID, Name, Slug, Description, ImageURL
+                FROM Destinations
                 WHERE DestinationID = ? AND Status = 'PUBLISHED'
             `;
             const [rows] = await pool.query(query, [destinationId]);
-            
+
             if (rows.length === 0) {
                 return res.status(404).json({ success: false, message: "Không tìm thấy địa danh này." });
             }
@@ -129,7 +130,7 @@ class DestinationController {
             const destinationId = req.params.id;
             const userId = req.user ? req.user.userId : null;
 
-            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, ${ratingColumns()}`;
+            let selectClause = `SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, ${departureColumns()}, ${ratingColumns()}`;
             let fromClause = ` FROM Tours t INNER JOIN Tour_Destinations td ON t.TourID = td.TourID`;
             const params = [];
 
@@ -139,7 +140,7 @@ class DestinationController {
                 params.push(userId);
             }
 
-            let query = selectClause + fromClause + ` WHERE td.DestinationID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()`;
+            let query = selectClause + fromClause + ` WHERE td.DestinationID = ? AND t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)`;
             params.push(destinationId);
 
             const [rows] = await pool.query(query, params);

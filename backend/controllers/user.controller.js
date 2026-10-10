@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { departureColumns } = require('../utils/departures');
 const { ratingColumns } = require('../utils/tourRatings');
 
 // --- 1. LẤY & CẬP NHẬT HỒ SƠ KHÁCH HÀNG (USER PROFILE) ---
@@ -27,20 +28,23 @@ const updateProfile = async (req, res) => {
         const userId = req.user.userId;
 
         if (phone && phone.trim()) {
-            const cleanPhone = phone.trim();
-            const [existPhone] = await pool.query('SELECT UserID FROM Users WHERE Phone = ? AND UserID != ?', [cleanPhone, userId]);
-            if (existPhone.length > 0) {
-                return res.status(400).json({ success: false, message: "Số điện thoại này đã được sử dụng bởi một tài khoản khác." });
+            const cleanPhone = phone.trim().replace(/[\s.-]/g, '');
+            const [currentUser] = await pool.query('SELECT Phone FROM Users WHERE UserID = ?', [userId]);
+            const currentPhone = currentUser[0]?.Phone || '';
+            if (cleanPhone && cleanPhone !== currentPhone) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Thay đổi số điện thoại yêu cầu xác thực bằng mã OTP. Vui lòng bấm 'Thay đổi số điện thoại'."
+                });
             }
         }
 
         await pool.query(
             `UPDATE Users 
-             SET Phone = COALESCE(?, Phone), 
-                 FullName = COALESCE(?, FullName), 
+             SET FullName = COALESCE(?, FullName), 
                  AvatarURL = COALESCE(?, AvatarURL) 
              WHERE UserID = ?`,
-            [phone ? phone.trim() : null, fullName ? fullName.trim() : null, avatarUrl || null, userId]
+            [fullName ? fullName.trim() : null, avatarUrl || null, userId]
         );
 
         return res.status(200).json({ success: true, message: "Cập nhật hồ sơ thành công!" });
@@ -85,10 +89,10 @@ const getWishlist = async (req, res) => {
     try {
         const userId = req.user.userId;
         const query = `
-            SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, t.StartDate, t.AvailableSlots, ${ratingColumns()}, f.SavedAt
+            SELECT t.TourID, t.Title, t.Slug, t.Price, t.OriginalPrice, t.Duration, ${departureColumns()}, ${ratingColumns()}, f.SavedAt
             FROM User_Favorite_Tours f
             JOIN Tours t ON f.TourID = t.TourID
-            WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND t.StartDate > NOW()
+            WHERE f.UserID = ? AND t.Status = 'PUBLISHED' AND EXISTS(SELECT 1 FROM TourDepartures active_d WHERE active_d.TourID=t.TourID AND active_d.Status='OPEN' AND active_d.StartDate>UTC_TIMESTAMP() AND active_d.AvailableSlots>0)
             ORDER BY f.SavedAt DESC
         `;
         const [tours] = await pool.query(query, [userId]);
@@ -229,6 +233,116 @@ const verifyEmailOtp = async (req, res) => {
     }
 };
 
+// --- 5. XÁC THỰC THAY ĐỔI SỐ ĐIỆN THOẠI BẰNG OTP (5 PHÚT) ---
+const phoneOtpStore = new Map();
+
+const requestPhoneOtp = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { phone } = req.body;
+
+        if (!phone || !phone.trim()) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập số điện thoại mới." });
+        }
+
+        const cleanPhone = phone.trim().replace(/[\s.-]/g, '');
+        if (cleanPhone.length < 9 || cleanPhone.length > 11 || !/^\d+$/.test(cleanPhone)) {
+            return res.status(400).json({ success: false, message: "Số điện thoại không hợp lệ (cần 9-11 chữ số)." });
+        }
+
+        // Kiểm tra xem số mới có trùng với số hiện tại không
+        const [currentUser] = await pool.query('SELECT Phone FROM Users WHERE UserID = ?', [userId]);
+        if (currentUser.length > 0 && currentUser[0].Phone === cleanPhone) {
+            return res.status(400).json({ success: false, message: "Số điện thoại mới trùng với số điện thoại hiện tại." });
+        }
+
+        // Kiểm tra xem số điện thoại đã bị tài khoản khác sử dụng chưa
+        const [existing] = await pool.query(
+            'SELECT UserID FROM Users WHERE Phone = ? AND UserID != ?',
+            [cleanPhone, userId]
+        );
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: "Số điện thoại này đã được sử dụng bởi một tài khoản khác." });
+        }
+
+        // Tạo mã OTP 6 số
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 5 * 60 * 1000;
+
+        phoneOtpStore.set('PHONE_CHANGE_' + userId, {
+            phone: cleanPhone,
+            otp,
+            expiresAt
+        });
+
+        console.log(`[USER PHONE OTP] User ${userId} yêu cầu đổi SĐT sang ${cleanPhone} với mã OTP: ${otp}`);
+
+        return res.status(200).json({
+            success: true,
+            message: `Mã OTP xác thực đã được gửi tới số điện thoại ${cleanPhone} (hiệu lực 5 phút).`,
+            otp: otp
+        });
+    } catch (error) {
+        console.error("Lỗi gửi OTP đổi số điện thoại:", error);
+        return res.status(500).json({ success: false, message: "Lỗi hệ thống khi gửi mã xác thực số điện thoại." });
+    }
+};
+
+const verifyPhoneOtp = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { phone, otp } = req.body;
+
+        if (!otp) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập mã OTP xác thực." });
+        }
+
+        const verifyData = phoneOtpStore.get('PHONE_CHANGE_' + userId);
+        if (!verifyData) {
+            return res.status(400).json({ success: false, message: "Chưa có yêu cầu đổi số điện thoại hoặc mã OTP đã hết hạn." });
+        }
+
+        if (Date.now() > verifyData.expiresAt) {
+            phoneOtpStore.delete('PHONE_CHANGE_' + userId);
+            return res.status(400).json({ success: false, message: "Mã OTP đã hết hạn (5 phút). Vui lòng lấy mã mới." });
+        }
+
+        if (phone) {
+            const cleanPhone = phone.trim().replace(/[\s.-]/g, '');
+            if (verifyData.phone !== cleanPhone) {
+                return res.status(400).json({ success: false, message: "Số điện thoại không khớp với yêu cầu lấy mã OTP ban đầu." });
+            }
+        }
+
+        if (verifyData.otp !== otp.toString().trim()) {
+            return res.status(400).json({ success: false, message: "Mã OTP không chính xác!" });
+        }
+
+        // Kiểm tra xem số điện thoại đã bị tài khoản khác sử dụng chưa
+        const [existing] = await pool.query(
+            'SELECT UserID FROM Users WHERE Phone = ? AND UserID != ?',
+            [verifyData.phone, userId]
+        );
+        if (existing.length > 0) {
+            phoneOtpStore.delete('PHONE_CHANGE_' + userId);
+            return res.status(400).json({ success: false, message: "Số điện thoại này đã được sử dụng bởi một tài khoản khác." });
+        }
+
+        // Cập nhật số điện thoại vào database cho người dùng
+        await pool.query('UPDATE Users SET Phone = ? WHERE UserID = ?', [verifyData.phone, userId]);
+        phoneOtpStore.delete('PHONE_CHANGE_' + userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Thay đổi số điện thoại thành công!",
+            phone: verifyData.phone
+        });
+    } catch (error) {
+        console.error("Lỗi xác thực đổi số điện thoại:", error);
+        return res.status(500).json({ success: false, message: "Lỗi hệ thống khi xác thực đổi số điện thoại." });
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
@@ -237,5 +351,7 @@ module.exports = {
     toggleFavoriteDestination,
     getFavoriteDestinations,
     requestEmailOtp,
-    verifyEmailOtp
+    verifyEmailOtp,
+    requestPhoneOtp,
+    verifyPhoneOtp
 };

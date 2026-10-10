@@ -52,7 +52,7 @@
             <td>
               <div class="meta-stack">
                 <span>{{ t.Duration }}</span>
-                <small class="text-muted">{{ formatDate(t.StartDate) }}</small>
+                <small class="text-muted">{{ t.StartDate ? formatDate(t.StartDate) : 'Chưa có lịch mở bán' }}</small>
               </div>
             </td>
             <td>
@@ -71,8 +71,8 @@
               <span>{{ t.AvailableSlots }} / {{ t.MaxSlots }}</span>
             </td>
             <td>
-              <select 
-                :value="t.Status" 
+              <select
+                :value="t.Status"
                 @change="handleStatusChange(t, $event.target.value)"
                 class="status-dropdown"
                 :disabled="t.Status === 'DELETED'"
@@ -85,6 +85,7 @@
             </td>
             <td style="text-align: right;">
               <div class="action-buttons" v-if="t.Status !== 'DELETED'">
+                <button class="btn btn-outline btn-sm" @click="scheduleTour = t">Lịch khởi hành</button>
                 <button class="btn btn-outline btn-sm" @click="openEditModal(t)">Sửa</button>
                 <button class="btn btn-danger-outline btn-sm" @click="tourToDelete = t">Xóa mềm</button>
               </div>
@@ -95,6 +96,7 @@
       </table>
     </div>
 
+    <AdminDepartures v-if="scheduleTour" :tour="scheduleTour" @close="scheduleTour = null" @updated="fetchTours" />
     <!-- MODAL TẠO & SỬA TOUR -->
     <Teleport to="body">
       <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -118,14 +120,14 @@
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label">Giá gốc ban đầu (VNĐ) *</label>
-                <input 
-                  v-model.number="formData.originalPrice" 
-                  type="number" 
-                  min="0" 
-                  step="1000" 
-                  required 
-                  class="form-control" 
-                  placeholder="VD: 5000000" 
+                <input
+                  v-model.number="formData.originalPrice"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  required
+                  class="form-control"
+                  placeholder="VD: 5000000"
                 />
               </div>
               <div class="form-group">
@@ -170,17 +172,11 @@
                 <label class="form-label">Thời lượng *</label>
                 <input v-model="formData.duration" type="text" required class="form-control" placeholder="3 Ngày 2 Đêm" />
               </div>
-              <div class="form-group">
-                <label class="form-label">Số chỗ tối đa *</label>
-                <input v-model.number="formData.maxSlots" type="number" min="1" required class="form-control" />
-              </div>
+
             </div>
 
             <div class="grid-2">
-              <div class="form-group">
-                <label class="form-label">Ngày khởi hành *</label>
-                <input v-model="formData.startDate" type="date" required class="form-control" />
-              </div>
+
               <div class="form-group">
                 <label class="form-label">Địa danh</label>
                 <select v-model="formData.destinationId" class="form-select">
@@ -247,6 +243,8 @@
 </template>
 
 <script setup>
+import AdminDepartures from './AdminDepartures.vue';
+
 import { ref, computed, onMounted } from 'vue';
 import adminApi from '../services/api';
 
@@ -260,6 +258,7 @@ const isEditing = ref(false);
 const currentId = ref(null);
 const tourToDelete = ref(null);
 
+const scheduleTour = ref(null);
 const formData = ref({
   title: '',
   slug: '',
@@ -396,6 +395,7 @@ const handleSubmit = async () => {
       discountPercent: Number(formData.value.discountPercent) || 0,
       itinerary: itineraryList.value
     };
+    delete payload.startDate; delete payload.endDate; delete payload.maxSlots;
     if (isEditing.value) {
       await adminApi.updateTour(currentId.value, payload);
       showToast('Cập nhật Tour và lộ trình thành công!');

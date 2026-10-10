@@ -21,7 +21,7 @@
       <div v-if="authStore.isAuthenticated && authStore.user" class="user-profile-menu" @click="menuOpen = !menuOpen">
         <img :src="authStore.userAvatar" class="avatar-thumbnail" alt="Avatar" />
         <span class="user-fullname">{{ authStore.userName }}</span>
-        <span class="caret-down">▾</span>
+        <span class="caret-down" :class="{ 'rotate': menuOpen }">▾</span>
 
         <div v-if="menuOpen" class="user-dropdown-pop" @click.stop>
           <div class="dropdown-user-info">
@@ -202,23 +202,32 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: var(--primary-light, #e6f7f2);
+  border: 1.5px solid rgba(0, 185, 154, 0.4);
   padding: 4px 14px 4px 5px;
-  border-radius: 24px;
+  border-radius: 28px;
   cursor: pointer;
   user-select: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 125, 104, 0.08);
+}
+.user-profile-menu:hover {
+  background: #d5f3e9;
+  border-color: var(--primary-mint, #00b99a);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 125, 104, 0.16);
 }
 .avatar-thumbnail {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
+  border: 2px solid var(--primary-mint, #00b99a);
 }
 .user-fullname {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--secondary-color);
+  color: #00594a;
   max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
@@ -226,7 +235,12 @@ onUnmounted(() => {
 }
 .caret-down {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--primary-color, #007d68);
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.caret-down.rotate {
+  transform: rotate(180deg);
 }
 .user-dropdown-pop {
   position: absolute;

@@ -35,33 +35,6 @@
 
         <!-- FORM ĐĂNG NHẬP -->
         <form v-if="currentTab === 'login'" @submit.prevent="handleLogin" class="auth-form">
-          <!-- CẢNH BÁO TÀI KHOẢN BỊ TẠM KHÓA 15 PHÚT -->
-          <div v-if="isAccountLocked" class="lockout-alert-box">
-            <div class="lockout-head">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" class="lockout-icon">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-              <strong>Tài khoản bị tạm khóa 15 phút!</strong>
-            </div>
-            <p class="lockout-desc">{{ errorMessage }}</p>
-            <button type="button" class="btn-lockout-recover" @click="openForgotFromLock">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-              </svg>
-              Khôi phục mật khẩu ngay bằng OTP
-            </button>
-          </div>
-
-          <div v-else-if="errorMessage" class="alert-danger">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; flex-shrink: 0; display: inline-block; vertical-align: middle;">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <span>{{ errorMessage }}</span>
-          </div>
-
           <div class="form-group">
             <label>Số điện thoại <span class="required-star">*</span></label>
             <input 
@@ -111,6 +84,19 @@
             <span v-if="loading" class="spinner-small"></span>
             <span v-else>Đăng nhập</span>
           </button>
+
+          <!-- CẢNH BÁO TÀI KHOẢN BỊ TẠM KHÓA 15 PHÚT (CHỈ HIỆN KHI NHẬP SAI 5 LẦN LIÊN TIẾP) -->
+          <div v-if="isAccountLocked" class="lockout-alert-box">
+            <div class="lockout-head">
+              <strong>Tài khoản bị tạm khóa 15 phút!</strong>
+            </div>
+            <p class="lockout-desc">{{ errorMessage }}</p>
+          </div>
+
+          <!-- CẢNH BÁO NHẬP SAI (CÒN LẦN THỬ TRƯỚC KHI BỊ KHÓA) DƯỚI NÚT ĐĂNG NHẬP -->
+          <div v-else-if="errorMessage" class="login-warning-box">
+            <p class="login-warning-text">{{ errorMessage }}</p>
+          </div>
 
           <div class="divider">
             <span>hoặc</span>
@@ -516,10 +502,10 @@ const errorMessage = ref('');
 const isAccountLocked = ref(false);
 
 const openForgotFromLock = () => {
-  forgotPhone.value = loginForm.value.phone;
-  currentTab.value = 'forgot';
-  errorMessage.value = '';
-  isAccountLocked.value = false;
+  openForgot();
+  if (forgotPhone.value && forgotPhone.value.trim().length >= 9) {
+    handleForgotSend();
+  }
 };
 
 watch(() => props.initialTab, (newTab) => {
@@ -600,7 +586,8 @@ const handleLogin = async () => {
       close();
     } else {
       errorMessage.value = res.message;
-      if (res.isLocked || (res.message && res.message.includes('khóa'))) {
+      const isReallyLocked = Boolean(res.isLocked || (res.message && (res.message.includes('đã tạm khóa') || res.message.includes('tạm thời bị khóa'))));
+      if (isReallyLocked) {
         isAccountLocked.value = true;
         toastStore.error(res.message);
       } else {
@@ -1086,14 +1073,17 @@ onUnmounted(() => {
   margin-bottom: 14px;
 }
 
-.lockout-alert-box {
+.lockout-alert-box,
+.login-warning-box {
   background: #fff1f2;
   border: 1.5px solid #fda4af;
   border-radius: 14px;
   padding: 14px 16px;
-  margin-bottom: 16px;
+  margin-top: 14px;
+  margin-bottom: 4px;
   box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08);
   animation: pulseLock 0.3s ease;
+  text-align: left;
 }
 
 @keyframes pulseLock {
@@ -1102,35 +1092,34 @@ onUnmounted(() => {
 }
 
 .lockout-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   color: #e11d48;
   font-size: 0.95rem;
   margin-bottom: 6px;
-}
-
-.lockout-icon {
-  color: #e11d48;
-  flex-shrink: 0;
 }
 
 .lockout-desc {
   font-size: 0.84rem;
   color: #4b5563;
   line-height: 1.45;
-  margin: 0 0 10px 0;
+  margin: 0;
+}
+
+.login-warning-text {
+  font-size: 0.84rem;
+  color: #374151;
+  line-height: 1.45;
+  margin: 0;
 }
 
 .btn-lockout-recover {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   background: #e11d48;
   color: #ffffff;
   border: none;
   border-radius: 20px;
-  padding: 7px 14px;
+  padding: 8px 16px;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;

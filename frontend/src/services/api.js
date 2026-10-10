@@ -226,6 +226,34 @@ class ApiService {
     }
   }
 
+  // Yêu cầu OTP đổi số điện thoại trong Hồ sơ cá nhân
+  async requestPhoneOtp(phone) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/request-phone-otp`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ phone })
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
+    }
+  }
+
+  // Xác thực mã OTP và đổi số điện thoại tài khoản
+  async verifyPhoneOtp(phone, otp) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/verify-phone-otp`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ phone, otp })
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: 'Không thể kết nối máy chủ hoặc dữ liệu phản hồi không hợp lệ. Vui lòng thử lại.' };
+    }
+  }
+
   // 6. Đổi mật khẩu
   async changePassword(oldPassword, newPassword) {
     try {
