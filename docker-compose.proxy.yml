@@ -1,0 +1,27 @@
+# Optional HTTPS proxy. Use together with docker-compose.yml.
+services:
+  backend:
+    environment:
+      TRUST_PROXY: "1"
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      frontend-admin:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

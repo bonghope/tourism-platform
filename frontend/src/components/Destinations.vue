@@ -34,6 +34,7 @@
 </template>
 
 <script setup>
+import { API_BASE_URL } from '../services/apiBase';
 import { ref, onMounted } from 'vue';
 import DestinationCard from './DestinationCard.vue';
 
@@ -47,8 +48,8 @@ const fetchDestinations = async () => {
   error.value = null;
   try {
     const url = searchQuery.value 
-      ? `http://localhost:3000/api/destinations/search?keyword=${encodeURIComponent(searchQuery.value)}`
-      : `http://localhost:3000/api/destinations/search`;
+      ? `${API_BASE_URL}/destinations/search?keyword=${encodeURIComponent(searchQuery.value)}`
+      : `${API_BASE_URL}/destinations/search`;
     const res = await fetch(url);
     const json = await res.json();
     if (json.success) {

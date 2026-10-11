@@ -47,6 +47,7 @@
 </template>
 
 <script setup>
+import { API_BASE_URL } from '../services/apiBase';
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import TourCard from './TourCard.vue';
@@ -69,7 +70,7 @@ const handleBannerError = (e) => {
 
 const fetchDestinationDetail = async () => {
   try {
-    const res = await fetch(`http://localhost:3000/api/destinations/${destId}`);
+    const res = await fetch(`${API_BASE_URL}/destinations/${destId}`);
     const json = await res.json();
     if (json.success) {
       destination.value = json.data;
@@ -85,7 +86,7 @@ const fetchDestinationDetail = async () => {
 
 const fetchRelatedTours = async () => {
   try {
-    const res = await fetch(`http://localhost:3000/api/destinations/${destId}/tours`);
+    const res = await fetch(`${API_BASE_URL}/destinations/${destId}/tours`);
     const json = await res.json();
     if (json.success) {
       tours.value = json.data;

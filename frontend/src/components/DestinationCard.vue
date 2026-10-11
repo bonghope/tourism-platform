@@ -23,6 +23,7 @@
 </template>
 
 <script setup>
+import { API_BASE_URL } from '../services/apiBase';
 import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
@@ -63,7 +64,7 @@ const toggleFavorite = async () => {
     return;
   }
   try {
-    const res = await fetch(`http://localhost:3000/api/destinations/${props.destination.DestinationID}/favorite`, {
+    const res = await fetch(`${API_BASE_URL}/destinations/${props.destination.DestinationID}/favorite`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authStore.token}`,

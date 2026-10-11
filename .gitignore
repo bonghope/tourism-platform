@@ -20,6 +20,8 @@ jspm_packages/
 .env.test
 .env.production
 .env.local
+!frontend/.env.production
+!frontend-manh-admin/.env.production
 
 # Mac OS
 .DS_Store

@@ -1,0 +1,11 @@
+api.toolvqd.io.vn {
+    reverse_proxy backend:14927
+}
+
+dev.toolvqd.io.vn {
+    reverse_proxy frontend:80
+}
+
+fb.toolvqd.io.vn {
+    reverse_proxy frontend-admin:80
+}

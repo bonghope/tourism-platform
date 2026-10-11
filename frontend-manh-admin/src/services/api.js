@@ -1,5 +1,6 @@
 // API Service chuyên trách cho Quản trị viên (Module 6)
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api').replace(/\/+$/, '');
+const API_HEALTH_URL = API_BASE_URL.replace(/\/api$/, '') + '/';
 
 const mockDb = {
   users: [
@@ -333,7 +334,7 @@ class AdminApiService {
 
   async checkBackend() {
     try {
-      const res = await fetch('http://localhost:3000/', { signal: AbortSignal.timeout(1200) });
+      const res = await fetch(API_HEALTH_URL, { signal: AbortSignal.timeout(1200) });
       return res.ok;
     } catch (e) {
       return false;

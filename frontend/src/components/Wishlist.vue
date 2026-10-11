@@ -67,6 +67,7 @@
 </template>
 
 <script setup>
+import { API_BASE_URL } from '../services/apiBase';
 import { ref, onMounted, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -95,7 +96,7 @@ const fetchWishlistTours = async () => {
   loadingTours.value = true;
   errorTours.value = null;
   try {
-    const res = await fetch(`http://localhost:3000/api/tours/wishlist`, {
+    const res = await fetch(`${API_BASE_URL}/tours/wishlist`, {
       headers: {
         'Authorization': `Bearer ${authStore.token}`
       }
@@ -128,7 +129,7 @@ const fetchWishlistDests = async () => {
   loadingDests.value = true;
   errorDests.value = null;
   try {
-    const res = await fetch(`http://localhost:3000/api/destinations/wishlist`, {
+    const res = await fetch(`${API_BASE_URL}/destinations/wishlist`, {
       headers: {
         'Authorization': `Bearer ${authStore.token}`
       }

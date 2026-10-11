@@ -14,6 +14,8 @@ const adminRoutes = require('./routes/admin.routes');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+// Number of trusted proxy hops (0 for direct access, 1 for the bundled Caddy proxy).
+app.set('trust proxy', Number(process.env.TRUST_PROXY || 0));
 require('./cron/cancelBooking');
 app.use(cors());
 app.use('/uploads/reviews', express.static(require('./utils/reviewImages').directory, { dotfiles:'deny', index:false, setHeaders:res => res.setHeader('X-Content-Type-Options','nosniff') }));

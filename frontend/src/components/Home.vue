@@ -159,6 +159,7 @@
 </template>
 
 <script setup>
+import { API_BASE_URL } from '../services/apiBase';
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import TourFilters from './TourFilters.vue';
 import PromotionTours from './PromotionTours.vue';
@@ -356,7 +357,7 @@ const fetchRecommendations = async () => {
     if (authStore.token) {
       headers['Authorization'] = `Bearer ${authStore.token}`;
     }
-    const res = await fetch('http://localhost:3000/api/destinations/recommendations', { headers });
+    const res = await fetch(`${API_BASE_URL}/destinations/recommendations`, { headers });
     const json = await res.json();
     if (json.success) {
       recommendedTours.value = json.data;
@@ -373,7 +374,7 @@ watch(() => authStore.token, () => {
 
 const fetchDestinations = async () => {
   try {
-    const res = await fetch('http://localhost:3000/api/destinations/search');
+    const res = await fetch(`${API_BASE_URL}/destinations/search`);
     const json = await res.json();
     if (json.success) {
       destinations.value = json.data;

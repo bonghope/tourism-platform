@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+import { API_BASE_URL } from '../services/apiBase';
 import { ref, computed, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
@@ -89,7 +90,7 @@ const toggleFavorite = async (e) => {
   }
 
   try {
-    const res = await fetch(`http://localhost:3000/api/tours/${props.tour.TourID}/favorite`, {
+    const res = await fetch(`${API_BASE_URL}/tours/${props.tour.TourID}/favorite`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authStore.token}`,
