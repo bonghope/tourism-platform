@@ -27,8 +27,9 @@ import { useToastStore } from './stores/toast';
 
 const toastStore = useToastStore();
 </script>
-
 <style>
+@import './styles/fonts.css';
+
 :root {
   --primary-color: #007d68;
   --primary-hover: #006050;
@@ -59,10 +60,16 @@ const toastStore = useToastStore();
 }
 
 body {
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'SVN-Gilroy', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-main);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
 }
 
 /* Glassmorphism utility */

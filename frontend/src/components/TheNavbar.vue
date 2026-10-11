@@ -146,15 +146,18 @@ onUnmounted(() => {
   font-weight: 800;
   color: #00b99a;
   letter-spacing: -0.5px;
+  white-space: nowrap;
 }
 .nav-links {
   display: flex;
   gap: 18px;
+  align-items: center;
 }
 .nav-links a {
   text-decoration: none;
   color: #243b40;
   font-weight: 500;
+  white-space: nowrap;
   transition: color 0.3s;
 }
 .nav-links a:hover,
@@ -165,6 +168,7 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-shrink: 0;
 }
 .btn-login {
   padding: 10px 24px;
@@ -176,6 +180,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  white-space: nowrap;
 }
 .btn-login:hover {
   background-color: rgba(0, 255, 204, 0.1);
@@ -190,6 +195,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   font-family: inherit;
+  white-space: nowrap;
 }
 .btn-register:hover {
   transform: translateY(-2px);

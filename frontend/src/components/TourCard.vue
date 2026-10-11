@@ -127,9 +127,9 @@ const formatPrice = (price) => {
 </script>
 
 <style scoped>
-.discount-badge { position: absolute; top: 16px; left: 16px; z-index: 2; padding: 7px 12px; background: #007d68; border-radius: 20px; color: white; font-size: .85rem; font-weight: 800; }
-.price-group { display: flex; flex-direction: column; align-items: end; flex-shrink: 0; gap: 4px; }
-.original-price { font-size: .8rem; color: #e2e8f0; font-weight: 400; }
+.discount-badge { position: absolute; top: 16px; left: 16px; z-index: 2; padding: 7px 12px; background: #007d68; border-radius: 20px; color: white; font-size: .85rem; font-weight: 800; white-space: nowrap; }
+.price-group { display: flex; flex-direction: column; align-items: end; flex-shrink: 0; gap: 4px; white-space: nowrap; }
+.original-price { font-size: .8rem; color: #e2e8f0; font-weight: 400; white-space: nowrap; }
 .departure-info { margin: 0 0 8px; color: #e3f5ef; font-size: .82rem; line-height: 1.5; }
 .tour-card {
   width: 100%;
@@ -192,23 +192,27 @@ const formatPrice = (price) => {
   display: flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
 }
 .price-stack {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
+  white-space: nowrap;
 }
 .old-price {
   font-size: 0.8rem;
   font-weight: 500;
   text-decoration: line-through;
   color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
 }
 .price {
   font-size: 1.1rem;
   font-weight: 800;
   color: #fbbf24; /* Vàng kim */
+  white-space: nowrap;
 }
 .card-discount-badge {
   position: absolute;

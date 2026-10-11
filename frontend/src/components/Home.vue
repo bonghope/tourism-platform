@@ -27,7 +27,20 @@
       <div class="hero-content-slider" v-if="currentHeroDest">
           <div :key="currentHeroDest.DestinationID" class="hero-text-inner">
             <div class="hero-location">📍 <span>{{ currentHeroDest.Name }}</span></div>
-            <h1 class="hero-title-slider">{{ currentHeroDest.Name }}</h1>
+            <h1 
+              class="hero-title-slider" 
+              :class="{ 'title-long': currentHeroDest.Name && currentHeroDest.Name.length > 18 }"
+            >
+              <template v-if="heroTitleSegments.length > 1">
+                <template v-for="(seg, idx) in heroTitleSegments" :key="idx">
+                  <span class="hero-title-seg">{{ seg }}</span>
+                  <span v-if="idx < heroTitleSegments.length - 1" class="hero-title-sep"> - </span>
+                </template>
+              </template>
+              <template v-else>
+                {{ currentHeroDest.Name }}
+              </template>
+            </h1>
             <p class="hero-desc-slider">
               {{ heroDescription }}
             </p>
@@ -254,6 +267,13 @@ const heroDescription = computed(() => {
   if (firstSentence.length <= 180) return firstSentence;
   const short = firstSentence.slice(0, 177);
   return `${short.slice(0, short.lastIndexOf(' '))}…`;
+});
+
+// Phân tách tên điểm đến thành từng cụm địa danh để không bị ngắt chữ vô lý giữa chừng khi xuống dòng
+const heroTitleSegments = computed(() => {
+  const name = currentHeroDest.value?.Name;
+  if (!name) return [];
+  return name.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
 });
 
 // Chuyển sang điểm đến trước (Sang trái)
@@ -514,7 +534,8 @@ onUnmounted(() => {
   left: 5%;
   transform: translateY(-50%);
   z-index: 10;
-  max-width: 600px;
+  max-width: min(880px, calc(100vw - 440px));
+  width: auto;
 }
 
 /* HIỆU ỨNG CHUYỂN CẢNH BLUR CHO NỘI DUNG CHỮ */
@@ -550,43 +571,70 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 .hero-title-slider {
-  font-size: 70px;
+  font-size: clamp(38px, 4.6vw, 64px);
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.15;
   margin-bottom: 20px;
   text-transform: uppercase;
+  letter-spacing: -0.5px;
+  text-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  text-wrap: balance;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.hero-title-slider.title-long {
+  font-size: clamp(30px, 3.8vw, 52px);
+  line-height: 1.18;
+}
+.hero-title-seg {
+  display: inline-block;
+  white-space: nowrap;
+}
+.hero-title-sep {
+  display: inline-block;
+  margin: 0 6px;
+  opacity: 0.85;
 }
 .hero-desc-slider {
   font-size: 16px;
   margin-bottom: 30px;
-  line-height: 1.6;
-  opacity: 0.9;
+  line-height: 1.65;
+  opacity: 0.95;
+  max-width: 620px;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 .btn-explore-slider {
-  padding: 12px 35px;
-  font-size: 16px;
+  padding: 13px 36px;
+  font-size: 15px;
   font-weight: 700;
-  color: #333;
+  color: #1e293b;
   background: white;
   border: none;
   border-radius: 30px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 1px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
 }
 .btn-explore-slider:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+  background: #f8fafc;
 }
 
 /* THUMBNAILS (BÊN PHẢI) */
@@ -682,10 +730,41 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+@media (max-width: 1024px) {
+  .hero-content-slider {
+    max-width: min(700px, calc(100vw - 360px));
+  }
+}
+
 @media (max-width: 900px) {
+  .hero-slider {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: 30px;
+  }
+  .hero-content-slider {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: 150px auto 30px;
+    padding: 0 20px;
+    max-width: 100%;
+    text-align: center;
+  }
+  .hero-location {
+    justify-content: center;
+  }
+  .hero-desc-slider {
+    margin: 0 auto 25px;
+  }
   .carousel-wrapper {
-    position: static;
-    margin: 20px auto;
+    position: relative;
+    right: auto;
+    bottom: auto;
+    margin: 20px auto 30px;
+    justify-content: center;
   }
   .carousel-card.side {
     display: none;

@@ -1,0 +1,67 @@
+/* ========================================================
+   SVN-Gilroy Web Fonts (Việt hóa)
+   ======================================================== */
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-MediumItalic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-Heavy.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SVN-Gilroy';
+  src: url('/fonts/SVN-Gilroy-Heavy.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
