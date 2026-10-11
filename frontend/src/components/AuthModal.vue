@@ -8,7 +8,7 @@
           <h2 class="auth-title">Chào mừng đến với TaVivu</h2>
           <p class="auth-desc">
             <template v-if="currentTab === 'register'">Đăng ký tài khoản bằng Số điện thoại</template>
-            <template v-else-if="currentTab === 'google'">Đăng nhập nhanh bằng tài khoản Google (Gmail + Mật khẩu + OTP)</template>
+            <template v-else-if="currentTab === 'google'">Chọn tài khoản Google để đăng nhập</template>
             <template v-else-if="currentTab === 'otp'">Nhập mã xác thực OTP gửi về số điện thoại</template>
             <template v-else-if="currentTab === 'forgot'">Khôi phục mật khẩu qua Số điện thoại</template>
             <template v-else>Đăng nhập bằng Số điện thoại của bạn</template>
@@ -357,131 +357,20 @@
 
     <!-- MÀN NHỎ ĐĂNG NHẬP GOOGLE RIÊNG BIỆT (POPUP DIALOG CHUẨN GOOGLE NỔI TRÊN MÀN HÌNH) -->
     <div v-if="showGooglePopup" class="google-dialog-backdrop" @click.self="closeGooglePopup">
-      <div class="google-dialog-card">
-        <!-- Nút đóng X ở góc trên phải -->
-        <button type="button" class="google-dialog-close" @click="closeGooglePopup" title="Đóng">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-
-        <!-- Header Google -->
-        <div class="google-dialog-header">
-          <div class="google-icon-circle">
-            <svg viewBox="0 0 24 24" width="28" height="28">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-            </svg>
-          </div>
-          <h3 class="google-dialog-title">Đăng nhập với Google</h3>
-          <p class="google-dialog-subtitle">Tiếp tục với TaVivu</p>
-        </div>
-
-        <div v-if="googleErrorMessage" class="alert-danger" style="margin-bottom: 16px;">
-          {{ googleErrorMessage }}
-        </div>
-
-        <!-- Form Gmail + Mật khẩu + OTP -->
-        <form @submit.prevent="handleGoogleLoginWithOtp" class="google-dialog-form">
-          <!-- 1. Tài khoản Gmail -->
-          <div class="form-group">
-            <label>Tài khoản Gmail <span class="required-star">*</span></label>
-            <input 
-              v-model="googleForm.email" 
-              type="email" 
-              required 
-              placeholder="example@gmail.com" 
-              class="form-control" 
-            />
-          </div>
-
-          <!-- 2. Mật khẩu Gmail (có mắt ẩn/hiện) -->
-          <div class="form-group">
-            <label>Mật khẩu Gmail <span class="required-star">*</span></label>
-            <div class="input-password-wrapper">
-              <input 
-                v-model="googleForm.password" 
-                :type="showGooglePassword ? 'text' : 'password'" 
-                required 
-                placeholder="Nhập mật khẩu Gmail" 
-                class="form-control" 
-              />
-              <button 
-                type="button" 
-                class="btn-toggle-eye" 
-                @click="showGooglePassword = !showGooglePassword"
-                :title="showGooglePassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
-                aria-label="Toggle password visibility"
-              >
-                <svg v-if="!showGooglePassword" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                  <line x1="1" y1="1" x2="23" y2="23"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- 3. Mã OTP xác thực Gmail -->
-          <div class="form-group">
-            <div class="label-row">
-              <label>Mã xác thực OTP <span class="required-star">*</span></label>
-              <span v-if="googleOtpSent" class="otp-badge-sent">Đã gửi mã</span>
-            </div>
-            <div class="otp-input-group-row">
-              <input 
-                v-model="googleForm.otp" 
-                type="text" 
-                maxlength="6" 
-                placeholder="Nhập mã" 
-                class="form-control otp-input-box" 
-              />
-              <button 
-                type="button" 
-                class="btn-get-otp-action" 
-                @click="requestGoogleLoginOtp" 
-                :disabled="sendingGoogleOtp || googleOtpCountdown > 0 || !googleForm.email || !googleForm.email.includes('@')"
-                :title="!googleForm.email ? 'Vui lòng nhập Gmail để lấy mã' : 'Lấy mã OTP'"
-              >
-                <span v-if="sendingGoogleOtp" class="spinner-small"></span>
-                <span v-else-if="googleOtpCountdown > 0">{{ googleOtpCountdown }}s</span>
-                <span v-else>{{ googleOtpSent ? 'Gửi lại mã' : 'Lấy mã' }}</span>
-              </button>
-            </div>
-            <p v-if="googleOtpSent" class="otp-help-text otp-success-text">
-              Mã OTP đã gửi đến Gmail <strong>{{ googleForm.email }}</strong>: <strong>{{ googleForm.otp }}</strong>
-            </p>
-          </div>
-
-          <!-- Nút hành động -->
-          <div class="google-dialog-actions">
-            <button type="button" class="btn-google-cancel" @click="closeGooglePopup">
-              Hủy bỏ
-            </button>
-            <button 
-              type="submit" 
-              class="btn-google-submit" 
-              :disabled="loading || !googleForm.otp || googleForm.otp.trim().length < 6 || !googleForm.password"
-              :class="{ 'btn-disabled': !googleForm.otp || googleForm.otp.trim().length < 6 || !googleForm.password }"
-            >
-              <span v-if="loading" class="spinner-small"></span>
-              <span v-else>Đăng nhập Google</span>
-            </button>
-          </div>
-        </form>
+      <div class="google-dialog-card" role="dialog" aria-modal="true" aria-label="Đăng nhập Google">
+        <button type="button" class="google-dialog-close" @click="closeGooglePopup">×</button>
+        <h3>Đăng nhập với Google</h3>
+        <p>Chọn tài khoản Google để tiếp tục với TaVivu.</p>
+        <p v-if="googleErrorMessage" class="alert-danger">{{ googleErrorMessage }}</p>
+        <p v-if="loading">Đang đăng nhập…</p>
+        <div ref="googleButton" style="margin-top:20px"></div>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue';
+import { ref, watch, onUnmounted, nextTick } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
 import api from '../services/api';
@@ -603,115 +492,47 @@ const handleLogin = async () => {
   }
 };
 
-// --- MÀN NHỎ ĐĂNG NHẬP GOOGLE RIÊNG BIỆT (POPUP DIALOG) ---
 const showGooglePopup = ref(false);
 const googleErrorMessage = ref('');
-const googleForm = ref({ email: '', password: '', otp: '' });
-const showGooglePassword = ref(false);
-const sendingGoogleOtp = ref(false);
-const googleOtpSent = ref(false);
-const googleOtpCountdown = ref(0);
-let googleOtpTimer = null;
-
-const openGooglePopup = () => {
+const googleButton = ref(null);
+let googleScriptPromise;
+function loadGoogle() {
+  if (window.google?.accounts?.id) return Promise.resolve();
+  if (!googleScriptPromise) googleScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => { googleScriptPromise = null; script.remove(); reject(new Error('Không tải được Google. Vui lòng thử lại.')); };
+    document.head.appendChild(script);
+  });
+  return googleScriptPromise;
+}
+async function openGooglePopup() {
   showGooglePopup.value = true;
   googleErrorMessage.value = '';
-};
-
-const closeGooglePopup = () => {
-  showGooglePopup.value = false;
-  googleErrorMessage.value = '';
-};
-
-const requestGoogleLoginOtp = async () => {
-  googleErrorMessage.value = '';
-  const email = (googleForm.value.email || '').trim().toLowerCase();
-  if (!email || !email.includes('@')) {
-    googleErrorMessage.value = 'Vui lòng nhập địa chỉ Gmail hợp lệ.';
-    toastStore.warning('Vui lòng nhập địa chỉ Gmail để nhận mã OTP.');
-    return;
-  }
-
-  sendingGoogleOtp.value = true;
   try {
-    const res = await api.requestGoogleOtp(email);
-    if (res.success) {
-      googleOtpSent.value = true;
-      toastStore.success(res.message || 'Mã OTP đã được gửi đến Gmail của bạn!');
-      if (res.otp) {
-        googleForm.value.otp = res.otp; // Tự động điền luôn mã OTP vào ô "Nhập mã"
-        toastStore.info(`Mã OTP Gmail của bạn: ${res.otp}`);
-      }
-
-      // Đếm ngược 60s
-      googleOtpCountdown.value = 60;
-      if (googleOtpTimer) clearInterval(googleOtpTimer);
-      googleOtpTimer = setInterval(() => {
-        if (googleOtpCountdown.value > 0) {
-          googleOtpCountdown.value--;
-        } else {
-          clearInterval(googleOtpTimer);
-        }
-      }, 1000);
-    } else {
-      googleErrorMessage.value = res.message;
-      toastStore.error(res.message);
-    }
-  } catch (e) {
-    googleErrorMessage.value = 'Lỗi hệ thống khi gửi mã OTP Gmail.';
-    toastStore.error('Lỗi khi gửi mã OTP Gmail.');
-  } finally {
-    sendingGoogleOtp.value = false;
-  }
-};
-
-const handleGoogleLoginWithOtp = async () => {
-  googleErrorMessage.value = '';
-  const email = (googleForm.value.email || '').trim().toLowerCase();
-  if (!email || !email.includes('@')) {
-    googleErrorMessage.value = 'Vui lòng nhập địa chỉ Gmail hợp lệ.';
-    toastStore.warning('Vui lòng nhập địa chỉ Gmail.');
-    return;
-  }
-
-  if (!googleForm.value.password) {
-    googleErrorMessage.value = 'Vui lòng nhập mật khẩu Gmail.';
-    toastStore.warning('Vui lòng nhập mật khẩu Gmail.');
-    return;
-  }
-
-  if (!googleForm.value.otp || googleForm.value.otp.trim().length < 6) {
-    googleErrorMessage.value = 'Vui lòng nhập đủ 6 chữ số mã OTP xác thực.';
-    toastStore.warning('Vui lòng nhập mã OTP để đăng nhập Google.');
-    return;
-  }
-
-  loading.value = true;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) throw new Error('Chưa cấu hình VITE_GOOGLE_CLIENT_ID.');
+    await loadGoogle(); await nextTick();
+    if (!showGooglePopup.value || !googleButton.value) return;
+    window.google.accounts.id.initialize({client_id:clientId,callback:handleGoogleCredential});
+    window.google.accounts.id.renderButton(googleButton.value,{theme:'outline',size:'large',text:'continue_with',width:300});
+  } catch(e) { googleErrorMessage.value = e.message; }
+}
+function closeGooglePopup() { showGooglePopup.value = false; googleErrorMessage.value = ''; }
+async function handleGoogleCredential({credential}) {
+  if (loading.value || !showGooglePopup.value) return;
+  loading.value = true; googleErrorMessage.value = '';
   try {
-    const res = await api.googleLogin({
-      email: email,
-      password: googleForm.value.password,
-      otp: googleForm.value.otp.trim(),
-      fullName: email.split('@')[0]
-    });
-
-    if (res.success) {
-      showGooglePopup.value = false;
-      authStore.setUserSession(res.user, res.accessToken);
-      toastStore.success(`Đăng nhập Google thành công! Xin chào ${res.user.fullName}.`);
-      emit('login-success', res.user);
-      close();
-    } else {
-      googleErrorMessage.value = res.message;
-      toastStore.error(res.message);
-    }
-  } catch (e) {
-    googleErrorMessage.value = 'Lỗi kết nối máy chủ khi đăng nhập Google.';
-    toastStore.error('Lỗi khi đăng nhập Google.');
-  } finally {
-    loading.value = false;
-  }
-};
+    const result = await api.googleLogin({idToken:credential});
+    if (!result.success) throw new Error(result.message || 'Đăng nhập Google thất bại.');
+    authStore.setUserSession(result.user,result.accessToken);
+    toastStore.success(`Xin chào ${result.user.fullName}.`);
+    emit('login-success',result.user);closeGooglePopup();close();
+  } catch(e) { googleErrorMessage.value = e.message; }
+  finally { loading.value = false; }
+}
 
 // --- GỬI MÃ OTP VỀ SĐT KHI BẤM "LẤY MÃ" ---
 // CHỈ CẦN NHẬP SĐT (KHÔNG BẮT BUỘC MẬT KHẨU HAY HỌ TÊN TRƯỚC)
@@ -931,7 +752,7 @@ const handleForgotReset = async () => {
 
 onUnmounted(() => {
   if (otpTimer) clearInterval(otpTimer);
-  if (googleOtpTimer) clearInterval(googleOtpTimer);
+
   if (forgotTimer) clearInterval(forgotTimer);
 });
 </script>

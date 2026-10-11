@@ -336,82 +336,37 @@ const verifyGoogleIdToken = async (idToken) => {
         };
     }
 
-    try {
-        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken.trim())}`);
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error_description || errData.error || 'Token Google không hợp lệ hoặc đã hết hạn.');
-        }
-        const payload = await response.json();
-        if (!payload || !payload.email) {
-            throw new Error('Google Token không chứa thông tin email.');
-        }
-
-        // Kiểm tra audience nếu có cấu hình GOOGLE_CLIENT_ID
-        if (process.env.GOOGLE_CLIENT_ID && payload.aud !== process.env.GOOGLE_CLIENT_ID) {
-            throw new Error('Google Client ID (aud) không khớp với ứng dụng.');
-        }
-
-        return payload;
-    } catch (err) {
-        throw new Error(`Xác thực Google idToken thất bại: ${err.message}`);
-    }
+    if (!process.env.GOOGLE_CLIENT_ID) throw new Error('Chưa cấu hình GOOGLE_CLIENT_ID.');
+    const { OAuth2Client } = require('google-auth-library');
+    const ticket = await new OAuth2Client().verifyIdToken({idToken, audience:process.env.GOOGLE_CLIENT_ID});
+    const payload = ticket.getPayload();
+    if (!payload?.sub || !payload.email || payload.email_verified !== true) throw new Error('Google chưa xác minh email của tài khoản.');
+    return payload;
 };
 
 // --- 4. ĐĂNG NHẬP GOOGLE VỚI TÀI KHOẢN, MẬT KHẨU & OTP HOẶC ID_TOKEN ---
 const googleLogin = async (req, res) => {
     try {
-        let { email, password, otp, fullName, avatarUrl, idToken } = req.body;
-        let cleanEmail = email && typeof email === 'string' ? email.trim().toLowerCase() : '';
-
-        // 1. Nếu client gửi idToken: Bắt buộc xác thực trực tiếp với máy chủ Google
-        if (idToken) {
-            let googlePayload;
-            try {
-                googlePayload = await verifyGoogleIdToken(idToken);
-            } catch (verifyErr) {
-                return res.status(401).json({ 
-                    success: false, 
-                    message: verifyErr.message || "Google ID Token không hợp lệ hoặc không thể xác thực với Google." 
-                });
-            }
-
-            // Sử dụng email chính chủ từ Google Token đã xác thực
-            cleanEmail = googlePayload.email.trim().toLowerCase();
-            if (googlePayload.name && !fullName) fullName = googlePayload.name;
-            if (googlePayload.picture && !avatarUrl) avatarUrl = googlePayload.picture;
-        } else if (otp) {
-            // 2. Nếu đăng nhập bằng OTP Gmail
-            if (!cleanEmail) {
-                return res.status(400).json({ success: false, message: "Vui lòng nhập tài khoản Gmail." });
-            }
-            const stored = otpStore.get('GOOGLE_OTP_' + cleanEmail);
-            if (!stored) {
-                return res.status(400).json({ success: false, message: "Không tìm thấy yêu cầu OTP hoặc mã đã hết hạn. Vui lòng bấm Lấy mã." });
-            }
-            if (Date.now() > stored.expiresAt) {
-                otpStore.delete('GOOGLE_OTP_' + cleanEmail);
-                return res.status(400).json({ success: false, message: "Mã OTP đã hết hạn (5 phút). Vui lòng lấy mã mới." });
-            }
-            if (stored.otp !== otp.toString().trim()) {
-                return res.status(400).json({ success: false, message: "Mã OTP không chính xác!" });
-            }
-            otpStore.delete('GOOGLE_OTP_' + cleanEmail);
-        } else {
-            return res.status(400).json({ success: false, message: "Vui lòng cung cấp Google idToken hoặc mã OTP để xác thực đăng nhập Google." });
-        }
-
+        const { idToken } = req.body;
+        if (!idToken || typeof idToken !== 'string') return res.status(400).json({success:false,message:'Vui lòng đăng nhập bằng nút Google.'});
+        let payload;
+        try { payload = await verifyGoogleIdToken(idToken); }
+        catch(e) { return res.status(401).json({success:false,message:'Không xác minh được tài khoản Google. Vui lòng thử lại.'}); }
+        const cleanEmail = payload.email.trim().toLowerCase();
+        const fullName = (payload.name || 'Khách Google').slice(0,100);
+        const avatarUrl = payload.picture || null;
+        const [linked] = await pool.query('SELECT * FROM Users WHERE GoogleID = ?', [payload.sub]);
         // Kiểm tra xem User đã có trong DB chưa
-        const [users] = await pool.query('SELECT * FROM Users WHERE Email = ?', [cleanEmail]);
+        const [users] = linked.length ? [linked] : await pool.query('SELECT * FROM Users WHERE Email = ?', [cleanEmail]);
         let user;
 
         if (users.length === 0) {
             // Chưa có -> Tự động cấp phát tài khoản mới với AuthProvider = GOOGLE
             const userId = crypto.randomUUID();
             await pool.query(
-                `INSERT INTO Users (UserID, Email, FullName, AvatarURL, Role, AuthProvider, Status) 
-                 VALUES (?, ?, ?, ?, 'USER', 'GOOGLE', 'ACTIVE')`,
-                [userId, cleanEmail, fullName || 'Khách Google', avatarUrl || null]
+                `INSERT INTO Users (UserID, Email, FullName, AvatarURL, GoogleID, Role, AuthProvider, Status) 
+                 VALUES (?, ?, ?, ?, ?, 'USER', 'GOOGLE', 'ACTIVE')`,
+                [userId, cleanEmail, fullName || 'Khách Google', avatarUrl || null, payload.sub]
             );
             const [newUsers] = await pool.query('SELECT * FROM Users WHERE UserID = ?', [userId]);
             user = newUsers[0];
@@ -419,6 +374,13 @@ const googleLogin = async (req, res) => {
             user = users[0];
             if (user.Status === 'BANNED' || user.Status === 'DELETED') {
                 return res.status(403).json({ success: false, message: "Tài khoản của bạn đã bị vô hiệu hóa." });
+            }
+            if (user.Status === 'LOCKED' && (!user.LockedUntil || new Date(user.LockedUntil) > new Date())) return res.status(403).json({success:false,message:'Tài khoản đang bị khóa.'});
+            if (user.GoogleID && user.GoogleID !== payload.sub) return res.status(409).json({success:false,message:'Email đã liên kết tài khoản Google khác.'});
+            if (!user.GoogleID) {
+                // Google is authoritative for Gmail and verified Workspace email only.
+                if (!cleanEmail.endsWith('@gmail.com') && !payload.hd) return res.status(409).json({success:false,message:'Vui lòng đăng nhập tài khoản cũ để liên kết email này.'});
+                await pool.query('UPDATE Users SET GoogleID = ? WHERE UserID = ? AND GoogleID IS NULL',[payload.sub,user.UserID]);
             }
             // Cập nhật lại Avatar nếu Google có ảnh mới
             if (avatarUrl && avatarUrl !== user.AvatarURL) {

@@ -10,7 +10,6 @@ router.post('/verify-register-otp', authController.verifyRegisterOtp);
 // 2. Đăng nhập
 router.post('/login', authController.login);
 router.post('/google-login', authController.googleLogin); // Đăng nhập Google với mật khẩu & OTP
-router.post('/google-otp', authController.requestGoogleOtp); // Gửi OTP đến Gmail
 
 // 3. Quên mật khẩu (Luồng 2 bước an toàn)
 router.post('/forgot-password', authController.forgotPassword);
