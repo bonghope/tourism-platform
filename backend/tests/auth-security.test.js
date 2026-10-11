@@ -52,7 +52,7 @@ test('Google login rejects missing idToken and missing OTP with 400', async () =
     await googleLogin({ body: { email: 'user@gmail.com' } }, r);
     assert.equal(r.statusCode, 400);
     assert.equal(r.body.success, false);
-    assert.ok(r.body.message.includes('idToken') || r.body.message.includes('OTP'));
+    assert.ok(r.body.message.includes('nút Google'));
 });
 
 test('Google login rejects invalid idToken with 401', async () => {
@@ -82,7 +82,7 @@ test('Google login rejects invalid idToken with 401', async () => {
     await googleLogin({ body: { idToken: 'invalid_tampered_token_xyz' } }, r);
     assert.equal(r.statusCode, 401);
     assert.equal(r.body.success, false);
-    assert.ok(r.body.message.includes('thất bại') || r.body.message.includes('không hợp lệ'));
+    assert.ok(r.body.message.includes('Không xác minh'));
 });
 
 test('Google login accepts valid verified idToken and issues JWT', async () => {
