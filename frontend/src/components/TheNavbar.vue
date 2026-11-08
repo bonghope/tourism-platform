@@ -13,6 +13,7 @@
       <router-link to="/destinations">Điểm đến</router-link>
       <a href="#promo-adventure-section" @click="scrollToPromo">Khuyến mãi</a>
       <a href="#favorite-section" @click="scrollToFavorite">Yêu thích</a>
+      <router-link to="/support">Hỗ trợ<SupportUnread v-if="authStore.isAuthenticated" :key="authStore.user?.userId" /></router-link>
       <router-link to="/about">Về chúng tôi</router-link>
     </div>
 
@@ -62,6 +63,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
 import AuthModal from './AuthModal.vue';
+import SupportUnread from './SupportUnread.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();

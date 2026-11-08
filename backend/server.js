@@ -45,6 +45,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/tours', tourRoutes);
 app.use('/api/destinations', destinationRoutes);
+app.use('/api/support', require('./routes/support.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

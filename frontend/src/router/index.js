@@ -10,6 +10,7 @@ import UserProfile from '../components/UserProfile.vue';
 
 import BookingCheckout from '../components/BookingCheckout.vue';
 const routes = [
+    { path: '/support', name: 'Support', component: () => import('../components/SupportInbox.vue'), props: route => ({ initialBooking: typeof route.query.booking === 'string' ? route.query.booking : '' }) },
     { path: '/bookings', name: 'BookingHistory', component: () => import('../components/BookingHistory.vue') },
     { path: '/bookings/:bookingId', name: 'InvoiceDetail', component: () => import('../components/InvoiceDetail.vue') },
     { path: '/payment/:bookingId', name: 'Payment', component: () => import('../components/PaymentPage.vue') },
@@ -87,7 +88,7 @@ const router = createRouter({
 });
 
 router.beforeEach(to => {
-    const privatePage = ['BookingHistory','InvoiceDetail','Payment','BookingCheckout','UserProfile','Wishlist'].includes(to.name);
+    const privatePage = ['Support','BookingHistory','InvoiceDetail','Payment','BookingCheckout','UserProfile','Wishlist'].includes(to.name);
     if (privatePage && !localStorage.getItem('user_access_token')) { alert('Vui lòng đăng nhập để tiếp tục.'); return { path:'/', query:{ redirect:to.fullPath } }; }
 });
 export default router;
