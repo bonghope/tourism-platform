@@ -151,10 +151,11 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 .desc-text {
-  font-size: 1.15rem;
-  line-height: 1.8;
-  color: var(--text-main);
+  font-size: 1.12rem;
+  line-height: 1.9;
+  color: #334155;
   white-space: pre-wrap;
+  letter-spacing: 0.2px;
 }
 .tours-section h2 {
   font-size: 2.2rem;

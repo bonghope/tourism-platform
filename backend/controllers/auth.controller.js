@@ -336,9 +336,10 @@ const verifyGoogleIdToken = async (idToken) => {
         };
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID) throw new Error('Chưa cấu hình GOOGLE_CLIENT_ID.');
+    const googleClientId = (process.env.GOOGLE_CLIENT_ID || '').trim().replace(/\s+/g, '');
+    if (!googleClientId) throw new Error('Chưa cấu hình GOOGLE_CLIENT_ID.');
     const { OAuth2Client } = require('google-auth-library');
-    const ticket = await new OAuth2Client().verifyIdToken({idToken, audience:process.env.GOOGLE_CLIENT_ID});
+    const ticket = await new OAuth2Client().verifyIdToken({idToken, audience:googleClientId});
     const payload = ticket.getPayload();
     if (!payload?.sub || !payload.email || payload.email_verified !== true) throw new Error('Google chưa xác minh email của tài khoản.');
     return payload;

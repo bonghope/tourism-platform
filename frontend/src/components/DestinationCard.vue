@@ -16,7 +16,7 @@
 
     <div class="dest-overlay">
       <h3>{{ destination.Name }}</h3>
-      <p v-if="destination.Description">{{ destination.Description.substring(0, 50) }}...</p>
+      <p v-if="destination.Description">{{ destination.Description }}</p>
       <slot name="footer"></slot>
     </div>
   </div>
@@ -161,5 +161,17 @@ const goToSearch = () => {
   font-size: 1.6rem;
   margin-bottom: 8px;
   font-weight: 800;
+}
+.dest-overlay p {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.45;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

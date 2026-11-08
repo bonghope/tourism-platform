@@ -512,7 +512,7 @@ async function openGooglePopup() {
   showGooglePopup.value = true;
   googleErrorMessage.value = '';
   try {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim().replace(/\s+/g, '');
     if (!clientId) throw new Error('Chưa cấu hình VITE_GOOGLE_CLIENT_ID.');
     await loadGoogle(); await nextTick();
     if (!showGooglePopup.value || !googleButton.value) return;
