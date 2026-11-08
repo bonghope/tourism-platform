@@ -12,7 +12,7 @@
       <router-link to="/tours">Tour</router-link>
       <router-link to="/destinations">Điểm đến</router-link>
       <a href="#promo-adventure-section" @click="scrollToPromo">Khuyến mãi</a>
-
+      <a href="#favorite-section" @click="scrollToFavorite">Yêu thích</a>
       <router-link to="/about">Về chúng tôi</router-link>
     </div>
 
@@ -83,15 +83,51 @@ const handleLogout = async () => {
   router.push('/');
 };
 
-const scrollToPromo = async (e) => {
-  e.preventDefault();
-  const el = document.getElementById('promo-adventure-section') || document.querySelector('.promo-adventure-banner');
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth' });
-  } else {
-    await router.push('/');
-    document.getElementById('promo-adventure-section')?.scrollIntoView({ behavior: 'smooth' });
+const navigateToSection = async (sectionId) => {
+  const hash = `#${sectionId}`;
+  if (router.currentRoute.value.path === '/') {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      const topOffset = 90;
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - topOffset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+      history.pushState(null, '', hash);
+      return;
+    }
   }
+
+  await router.push({ path: '/', hash });
+  let attempts = 0;
+  const poll = setInterval(() => {
+    attempts++;
+    const target = document.getElementById(sectionId);
+    if (target) {
+      clearInterval(poll);
+      const topOffset = 90;
+      const elementPosition = target.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - topOffset;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    } else if (attempts > 30) {
+      clearInterval(poll);
+    }
+  }, 60);
+};
+
+const scrollToPromo = (e) => {
+  e.preventDefault();
+  navigateToSection('promo-adventure-section');
+};
+
+const scrollToFavorite = (e) => {
+  e.preventDefault();
+  navigateToSection('favorite-section');
 };
 
 const closeMenuOutside = (e) => {

@@ -108,14 +108,32 @@
        </div>
     </header>
 
-    <!-- SECTION: GỢI Ý RIÊNG -->
-    <section v-if="recommendedTours.length > 0" class="tours-section">
+    <!-- SECTION: GỢI Ý RIÊNG (PHẦN YÊU THÍCH) -->
+    <section id="favorite-section" class="tours-section favorite-section-anchor">
       <div class="section-header">
         <h2 class="section-title">Gợi Ý Dành Riêng Cho Bạn</h2>
         <p class="section-desc">Dựa trên các địa danh bạn đã yêu thích</p>
       </div>
-      <div class="tours-grid">
+
+      <div v-if="loadingRecs" class="loading-state">
+        <div class="spinner"></div>
+        <p>Đang tìm gợi ý phù hợp cho bạn...</p>
+      </div>
+
+      <div v-else-if="recommendedTours.length > 0" class="tours-grid">
         <TourCard v-for="tour in recommendedTours" :key="tour.TourID" :tour="tour" />
+      </div>
+
+      <div v-else class="empty-state glass-panel favorite-empty-card">
+        <p v-if="authStore.isAuthenticated">
+          Bạn chưa lưu địa danh yêu thích nào. Hãy khám phá các điểm đến hấp dẫn và thả tim ❤️ để nhận gợi ý dành riêng cho bạn!
+        </p>
+        <p v-else>
+          Đăng nhập và thả tim ❤️ các điểm đến bạn yêu thích để nhận gợi ý tour du lịch cá nhân hóa.
+        </p>
+        <router-link to="/destinations" class="btn-primary btn-explore-dest">
+          Khám phá Điểm đến ngay
+        </router-link>
       </div>
     </section>
 
@@ -188,6 +206,7 @@ const fallbackHeroBg = 'https://images.unsplash.com/photo-1528181304800-259b0884
 const route = useRoute();
 const tours = ref([]);
 const recommendedTours = ref([]);
+const loadingRecs = ref(false);
 const destinations = ref([]);
 const loading = ref(true);
 const error = ref(null);
@@ -372,6 +391,7 @@ const fetchTours = async () => {
 };
 
 const fetchRecommendations = async () => {
+  loadingRecs.value = true;
   try {
     const headers = {};
     if (authStore.token) {
@@ -384,6 +404,31 @@ const fetchRecommendations = async () => {
     }
   } catch (err) {
     console.error('Không thể lấy danh sách gợi ý', err);
+  } finally {
+    loadingRecs.value = false;
+  }
+};
+
+const scrollToHash = () => {
+  if (route.hash) {
+    const targetId = route.hash.replace('#', '');
+    let count = 0;
+    const interval = setInterval(() => {
+      count++;
+      const el = document.getElementById(targetId);
+      if (el) {
+        clearInterval(interval);
+        const topOffset = 90;
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - topOffset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      } else if (count > 30) {
+        clearInterval(interval);
+      }
+    }, 60);
   }
 };
 
@@ -421,6 +466,11 @@ onMounted(() => {
   fetchDestinations();
   startSliderTimer();
   window.addEventListener('keydown', handleKeyDown);
+  scrollToHash();
+});
+
+watch(() => route.hash, () => {
+  scrollToHash();
 });
 
 onUnmounted(() => {
@@ -792,6 +842,40 @@ onUnmounted(() => {
   padding: 0 24px;
   position: relative;
   z-index: 1;
+}
+.favorite-section-anchor {
+  scroll-margin-top: 100px;
+  padding-top: 40px;
+  padding-bottom: 20px;
+}
+.favorite-empty-card {
+  text-align: center;
+  padding: 36px 24px;
+  max-width: 650px;
+  margin: 0 auto 30px;
+  border-radius: 16px;
+  border: 1px dashed rgba(0, 185, 154, 0.4);
+  background: rgba(255, 255, 255, 0.7);
+}
+.favorite-empty-card p {
+  color: var(--text-color, #243b40);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+.btn-explore-dest {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 24px;
+  border-radius: 24px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.25s ease;
+}
+.btn-explore-dest:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 185, 154, 0.25);
 }
 .section-header {
   text-align: center;
