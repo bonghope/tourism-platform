@@ -14,23 +14,30 @@
     <div v-else-if="tour" class="booking-container">
       <!-- Cột Trái: Form điền thông tin -->
       <div class="form-section glass-panel">
-        <h2>Thông tin liên hệ</h2>
+        <h2>Thông tin người liên hệ</h2>
         <form @submit.prevent="submitBooking" class="booking-form">
           <div class="form-group"><label for="departure">Lịch khởi hành (*)</label><select id="departure" v-model="departureId" required><option value="" disabled>Chọn lịch khởi hành</option><option v-for="d in tour.departures" :key="d.DepartureID" :value="d.DepartureID">{{ formatDate(d.StartDate) }} – {{ formatDate(d.EndDate) }} · {{ d.AvailableSlots }} chỗ</option></select><p v-if="!tour.departures?.length">Chưa có lịch khởi hành đang mở bán.</p></div>
+          <fieldset class="contact-options" :disabled="isSubmitting || loadingContact">
+            <legend>Ai là người liên hệ cho chuyến đi?</legend>
+            <label :class="{ selected: contactType === 'self' }"><input type="radio" v-model="contactType" value="self" name="contact-type" /> Tôi là người liên hệ</label>
+            <label :class="{ selected: contactType === 'other' }"><input type="radio" v-model="contactType" value="other" name="contact-type" /> Người khác là người liên hệ</label>
+          </fieldset>
+          <p class="contact-hint" role="status">{{ loadingContact ? 'Đang lấy thông tin tài khoản…' : contactType === 'self' ? 'Thông tin được điền từ tài khoản. Bạn có thể bổ sung hoặc chỉnh sửa cho đơn này.' : 'Nhập thông tin người thân hoặc người liên hệ thay bạn cho chuyến đi.' }}</p>
+          <p class="contact-hint">Thông tin này chỉ dùng cho đơn đặt tour, không thay đổi hồ sơ tài khoản.</p>
           <div class="form-group">
-            <label>Họ và tên người đặt (*)</label>
-            <input type="text" v-model="form.contactName" required placeholder="VD: Nguyễn Văn A" />
+            <label for="contact-name">Họ và tên người liên hệ (*)</label>
+            <input id="contact-name" type="text" v-model="form.contactName" :disabled="loadingContact || isSubmitting" maxlength="100" autocomplete="name" required placeholder="VD: Nguyễn Văn A" />
           </div>
           
           <div class="form-group">
-            <label>Số điện thoại (*)</label>
-            <input type="tel" v-model="form.contactPhone" required placeholder="VD: 0912345678" />
+            <label for="contact-phone">Số điện thoại người liên hệ (*)</label>
+            <input id="contact-phone" type="tel" v-model="form.contactPhone" :disabled="loadingContact || isSubmitting" maxlength="20" autocomplete="tel" required placeholder="VD: 0912345678" />
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label>Số lượng khách (*)</label>
-              <input type="number" v-model="form.passengerCount" min="1" :max="Math.min(10, (selectedDeparture?.AvailableSlots || 0))" required />
+              <input type="number" v-model="form.passengerCount" min="1" :max="(selectedDeparture?.AvailableSlots || 0)" required />
             </div>
             <div class="form-group">
               <label>Phương thức thanh toán</label>
@@ -46,7 +53,7 @@
           <div v-if="errorMsg" class="alert error-alert">⚠️ {{ errorMsg }}</div>
           <div v-if="successMsg" class="alert success-alert">✅ {{ successMsg }}</div>
 
-          <button type="submit" class="btn-book-submit" :disabled="isSubmitting || !selectedDeparture">
+          <button type="submit" class="btn-book-submit" :disabled="isSubmitting || loadingContact || !selectedDeparture">
             <span v-if="isSubmitting" class="spinner-small"></span>
             <span v-else>Giữ chỗ & Tiếp tục thanh toán</span>
           </button>
@@ -80,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { request, userId } from '../services/bookings';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
@@ -98,12 +105,33 @@ const isSubmitting = ref(false);
 const errorMsg = ref('');
 const successMsg = ref('');
 
+const contactType = ref('self');
+const loadingContact = ref(true);
+const contactDrafts = {
+  self: { contactName: authStore.user?.fullName || '', contactPhone: authStore.user?.phone || '' },
+  other: { contactName: '', contactPhone: '' }
+};
 const form = ref({
-  contactName: '',
-  contactPhone: '',
+  ...contactDrafts.self,
   passengerCount: 1,
   paymentMethod: 'VNPAY'
 });
+
+watch(contactType, (type, previous) => {
+  contactDrafts[previous] = { contactName: form.value.contactName, contactPhone: form.value.contactPhone };
+  Object.assign(form.value, contactDrafts[type]);
+});
+async function loadContactProfile() {
+  try {
+    const result = await request('/user/profile');
+    if (result.user) {
+      contactDrafts.self = { contactName: result.user.FullName || '', contactPhone: result.user.Phone || '' };
+      if (contactType.value === 'self') Object.assign(form.value, contactDrafts.self);
+    }
+  } catch {
+    // Keep the signed-in profile as a fallback and allow manual entry.
+  } finally { loadingContact.value = false; }
+}
 
 // Lấy thông tin Tour để hiển thị bên cột phải
 const fetchTour = async () => {
@@ -121,14 +149,19 @@ const fetchTour = async () => {
 
 // M3: Xử lý gọi API Đặt Tour (Có Row-level lock ở Backend)
 const submitBooking = async () => {
+  if (isSubmitting.value || loadingContact.value) return;
   isSubmitting.value = true;
   errorMsg.value = '';
   successMsg.value = '';
 
   try {
+    const contactName = form.value.contactName.trim();
+    const contactPhone = form.value.contactPhone.trim().replace(/[\s.-]/g, '');
+    if (!contactName || contactName.length > 100) throw new Error('Vui lòng nhập họ tên người liên hệ (tối đa 100 ký tự).');
+    if (!/^\+?\d{9,15}$/.test(contactPhone)) throw new Error('Vui lòng nhập số điện thoại liên hệ hợp lệ (9–15 chữ số).');
     const count = Number(form.value.passengerCount);
-    if (!Number.isInteger(count) || count < 1 || count > Math.min(10, selectedDeparture.value?.AvailableSlots || 0)) throw new Error('Số khách không hợp lệ (tối đa 10 người và không vượt số chỗ trống).');
-    const json = await request('/bookings', { method: 'POST', body: JSON.stringify({ tourId: tour.value.TourID, departureId: departureId.value, userId: userId(), ...form.value, passengerCount: count }) });
+    if (!Number.isSafeInteger(count) || count < 1 || count > Number(selectedDeparture.value?.AvailableSlots || 0)) throw new Error('Số khách phải là số nguyên dương và không vượt số chỗ còn lại của lịch khởi hành.');
+    const json = await request('/bookings', { method: 'POST', body: JSON.stringify({ tourId: tour.value.TourID, departureId: departureId.value, userId: userId(), ...form.value, contactName, contactPhone, passengerCount: count }) });
     await router.push({ path: `/payment/${encodeURIComponent(json.bookingId)}`, query: { method: form.value.paymentMethod } });
   } catch (err) {
     errorMsg.value = err.message;
@@ -142,10 +175,17 @@ const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN'
 
 onMounted(() => {
   fetchTour();
+  loadContactProfile();
 });
 </script>
 
 <style scoped>
+.contact-options { border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; min-width:0; }
+.contact-options legend { font-weight:600; margin-bottom:12px; }
+.contact-options label { display:flex; align-items:center; gap:10px; border:1px solid #cbd5e1; border-radius:10px; padding:14px; cursor:pointer; }
+.contact-options label.selected { background:#e6f7f3; border-color:#0d9488; }
+.contact-options input { accent-color:#0d9488; }
+.contact-hint { color:var(--text-muted); font-size:.9rem; line-height:1.6; margin:0; }
 .discount-note { color: #007d68; font-size: .9rem; line-height: 1.6; }
 .booking-page { max-width: 1100px; margin: 0 auto; padding: 100px 20px 60px; }
 .header-section { margin-bottom: 40px; }

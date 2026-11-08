@@ -10,8 +10,8 @@ exports.createBooking = async (req, res) => {
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        if (!Number.isInteger(passengerCount) || passengerCount <= 0 || passengerCount > 10) {
-           throw new Error('Số lượng khách phải từ 1 đến 10 người.');
+        if (!Number.isSafeInteger(passengerCount) || passengerCount <= 0) {
+           throw new Error('Số lượng khách phải là số nguyên dương.');
 }
 
         const [tours] = await connection.query(
@@ -239,6 +239,13 @@ exports.getBookingDetails = async (req, res) => {
             throw new Error('Không tìm thấy hóa đơn.');
         }
 
+        const [reviews] = await connection.query(
+            `SELECT ReviewID, Rating, Content, Images, OwnerReply, Status,
+                    DATE_FORMAT(CreatedAt, '%Y-%m-%dT%H:%i:%sZ') AS CreatedAt
+             FROM Reviews WHERE BookingID = ? AND UserID = ? LIMIT 1`,
+            [bookingId, req.user.userId]
+        );
+        bookings[0].Review = reviews[0] || null;
         res.status(200).json({ success: true, data: bookings[0] });
     } catch (error) {
         res.status(404).json({ success: false, message: error.message });

@@ -12,6 +12,14 @@
       <div v-if="canReview" class="panel no-print" style="margin-top:24px"><h2>Chia sẻ trải nghiệm chuyến đi</h2><p class="muted">Đánh giá của bạn giúp các khách hàng khác lựa chọn tour.</p><div class="actions"><button class="button primary" @click="reviewOpen = true">Viết đánh giá</button></div></div>
       <ReviewForm v-if="reviewOpen && canReview" :booking-id="booking.BookingID" :tour-id="booking.TourID" :tour-title="booking.Title" @close="reviewOpen = false" @submitted="reviewSubmitted" />
       <p v-if="booking.HasReview" class="message">Bạn đã đánh giá đơn này.</p>
+      <router-link v-if="booking.Review" class="panel own-review" :to="{ name: 'TourDetail', params: { id: booking.TourID }, hash: '#reviews' }" aria-label="Xem đánh giá trên trang tour">
+        <div class="own-review-heading"><strong>Đánh giá của bạn</strong><span class="own-review-stars" :aria-label="booking.Review.Rating + ' trên 5 sao'">{{ '★'.repeat(Math.max(0, Math.min(5, Number(booking.Review.Rating)))) }}{{ '☆'.repeat(5 - Math.max(0, Math.min(5, Number(booking.Review.Rating)))) }}</span></div>
+        <p class="muted">{{ date(booking.Review.CreatedAt) }}</p>
+        <p class="own-review-content">{{ booking.Review.Content }}</p>
+        <p v-if="booking.Review.OwnerReply" class="muted"><strong>TaVivu phản hồi:</strong> {{ booking.Review.OwnerReply }}</p>
+        <p v-if="booking.Review.Status === 'HIDDEN'" class="muted">Đánh giá này hiện không hiển thị công khai.</p>
+        <span class="own-review-link">Xem đánh giá</span>
+      </router-link>
       <p v-else-if="reviewExpired" class="message">Ngoài thời gian đánh giá</p>
     </template>
     <button v-if="error && !booking" class="button" @click="load">Thử lại</button>
@@ -35,3 +43,11 @@ async function cancel() { busy.value = true; error.value = ''; try { const resul
 const printInvoice = () => window.print();
 watch(() => route.params.bookingId, load, { immediate:true });
 </script>
+<style scoped>
+.own-review { display:block; margin-top:16px; color:inherit; text-decoration:none; transition:box-shadow .2s, border-color .2s; }
+.own-review:hover,.own-review:focus-visible { border-color:#0d9488; box-shadow:0 6px 24px #0d948820; }
+.own-review-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.own-review-stars { color:#d97706; font-size:1.25rem; letter-spacing:2px; }
+.own-review-content { white-space:pre-wrap; overflow-wrap:anywhere; margin:12px 0; }
+.own-review-link { display:inline-block; margin-top:12px; color:#0d9488; font-weight:600; }
+</style>

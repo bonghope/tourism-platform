@@ -11,18 +11,7 @@
     </div>
 
     <div v-else-if="tour" class="detail-container">
-      <!-- Nút quay lại danh sách tour (giữ nguyên bộ lọc) -->
-      <div class="top-back-bar">
-        <button class="btn-back-to-tours" @click="handleBackToTours">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
-          </svg>
-          Quay lại danh sách chuyến đi
-        </button>
-      </div>
-
-      <!-- Khung Hình ảnh -->
+<!-- Khung Hình ảnh -->
       <div class="gallery">
         <img 
           :src="coverImage" 
@@ -130,13 +119,6 @@ const defaultTourCover = 'https://images.unsplash.com/photo-1528181304800-259b08
 const route = useRoute();
 const router = useRouter();
 
-const handleBackToTours = () => {
-  if (route.query && Object.keys(route.query).length > 0) {
-    router.push({ path: '/tours', query: route.query });
-  } else {
-    router.push('/tours');
-  }
-};
 const tour = ref(null);
 const departureId = ref('');
 const selectedDeparture = computed(() => tour.value?.departures?.find(d => d.DepartureID === departureId.value));
