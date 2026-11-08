@@ -63,6 +63,7 @@
               >
                 Đánh giá
               </button>
+              <button :class="['nav-tab-item', currentTab === 'support' ? 'active' : '']" @click="currentTab = 'support'">Hỗ trợ khách hàng <SupportUnread /></button>
             </nav>
 
             <!-- Viewport -->
@@ -109,6 +110,7 @@
               <AdminTours v-else-if="currentTab === 'tours'" />
               <AdminBookings v-else-if="currentTab === 'bookings'" />
               <AdminReviews v-else-if="currentTab === 'reviews'" />
+              <AdminSupport v-else-if="currentTab === 'support'" admin-mode />
             </div>
           </div>
         </main>
@@ -126,6 +128,8 @@ import AdminDestinations from './components/AdminDestinations.vue';
 import AdminTours from './components/AdminTours.vue';
 import AdminBookings from './components/AdminBookings.vue';
 import AdminReviews from './components/AdminReviews.vue';
+import AdminSupport from './components/AdminSupport.vue';
+import SupportUnread from './components/SupportUnread.vue';
 import adminApi from './services/api';
 
 const isAuthenticated = ref(adminApi.isAuthenticated());
